@@ -1,0 +1,75 @@
+# ChambaIA local stack.
+#   docker compose up -d                  -> PostgreSQL (pgvector) + Redis (what you need for `dotnet run`)
+#   docker compose --profile full up -d   -> also builds and runs the API and the Worker as containers
+#
+# Host ports are deliberately non-default (5442/6382) so they do not collide with other local projects.
+# Override any of them in .env (see .env.example).
+
+name: chambaia
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-chambaia}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chambaia_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-chambaia}
+    ports:
+      - "${POSTGRES_PORT:-5442}:5432"
+    volumes:
+      - chambaia_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chambaia} -d ${POSTGRES_DB:-chambaia}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6382}:6379"
+    volumes:
+      - chambaia_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-chambaia};Username=${POSTGRES_USER:-chambaia};Password=${POSTGRES_PASSWORD:-chambaia_dev}
+      ConnectionStrings__Redis: redis:6379,abortConnect=false
+      Jwt__Key: ${JWT_KEY:-}   # required (32+ chars): the API refuses to start without it
+      Seed__Enabled: ${SEED_ENABLED:-false}
+      Seed__DemoPassword: ${SEED_DEMO_PASSWORD:-}
+    ports:
+      - "${API_PORT:-5180}:8080"
+
+  worker:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: infra/docker/worker.Dockerfile
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    environment:
+      DOTNET_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-chambaia};Username=${POSTGRES_USER:-chambaia};Password=${POSTGRES_PASSWORD:-chambaia_dev}
+      ConnectionStrings__Redis: redis:6379,abortConnect=false
+
+volumes:
+  chambaia_pg:
+  chambaia_redis:
