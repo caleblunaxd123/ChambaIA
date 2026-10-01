@@ -76,6 +76,15 @@ describe('api client', () => {
     });
   });
 
+  it('never shows the framework default title in English', async () => {
+    fetchMock.mockResolvedValueOnce(json(404, { title: 'Not Found', status: 404 }));
+
+    await expect(request('/matches/x/reset', { method: 'POST' })).rejects.toMatchObject({
+      message: 'No encontramos lo que buscabas. Puede que ya no esté disponible.',
+      status: 404,
+    });
+  });
+
   it('turns network failures into a friendly error', async () => {
     fetchMock.mockRejectedValueOnce(new TypeError('Network request failed'));
 

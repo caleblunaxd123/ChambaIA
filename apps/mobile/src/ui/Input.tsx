@@ -16,24 +16,27 @@ type InputProps = Omit<TextInputProps, 'style'> & {
 
 export function Input({ label, error, hint, icon, suffix, secureTextEntry, ...rest }: InputProps) {
   const { colors, radius } = useTheme();
+  const multiline = rest.multiline === true;
   const [focused, setFocused] = useState(false);
   const [hidden, setHidden] = useState(true);
   const isPassword = secureTextEntry === true;
 
   return (
     <View style={{ gap: 6 }}>
-      {label ? <Text variant="caption" tone="muted">{label}</Text> : null}
+      {label ? <Text variant="caption" style={{ color: colors.textMuted, fontFamily: fontFamily.semibold }}>{label}</Text> : null}
       <View
         style={{
           flexDirection: 'row',
-          alignItems: 'center',
+          alignItems: multiline ? 'flex-start' : 'center',
           gap: 10,
           backgroundColor: colors.surface,
           borderRadius: radius.md,
           borderWidth: 1.5,
           borderColor: error ? colors.danger : focused ? colors.primary : colors.border,
           paddingHorizontal: 14,
-          minHeight: 52,
+          paddingTop: multiline ? 4 : 0,
+          minHeight: multiline ? 112 : 52,
+          ...(focused ? { boxShadow: `0 0 0 3px ${error ? colors.dangerTint : colors.primaryTint}` } : null),
         }}
       >
         {icon ? <Icon name={icon} size={19} tone="subtle" /> : null}
@@ -51,10 +54,14 @@ export function Input({ label, error, hint, icon, suffix, secureTextEntry, ...re
           placeholderTextColor={colors.textSubtle}
           style={{
             flex: 1,
+            // Without this, web <input> keeps its intrinsic width and pushes the suffix/eye icon out of the box.
+            minWidth: 0,
             color: colors.text,
             fontFamily: fontFamily.medium,
             fontSize: 15.5,
             paddingVertical: 12,
+            textAlignVertical: multiline ? 'top' : 'center',
+            minHeight: multiline ? 100 : undefined,
             outlineStyle: 'solid',
             outlineWidth: 0,
           }}
@@ -67,7 +74,10 @@ export function Input({ label, error, hint, icon, suffix, secureTextEntry, ...re
         ) : null}
       </View>
       {error ? (
-        <Text variant="caption" tone="danger">{error}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Icon name="alert-circle" size={14} tone="danger" />
+          <Text variant="caption" tone="danger" style={{ flex: 1 }}>{error}</Text>
+        </View>
       ) : hint ? (
         <Text variant="caption" tone="subtle">{hint}</Text>
       ) : null}

@@ -9,12 +9,11 @@ import { usePreferences, useUpdatePreferences } from '@/api/queries';
 import { type PreferencesDraft, PreferencesFields, draftFromPreferences } from '@/features/profile/PreferencesFields';
 import { type PreferencesForm, preferencesFormSchema, preferencesToInput } from '@/features/profile/schemas';
 import { haptics } from '@/lib/haptics';
+import { toast } from '@/state/toast-store';
 import { Button } from '@/ui/Button';
-import { Card } from '@/ui/Card';
-import { ErrorState } from '@/ui/EmptyState';
+import { ErrorState, InlineError } from '@/ui/EmptyState';
 import { ModalScreen } from '@/ui/ModalScreen';
 import { Skeleton } from '@/ui/Skeleton';
-import { Text } from '@/ui/Text';
 
 export default function EditPreferencesScreen() {
   const prefs = usePreferences();
@@ -22,7 +21,7 @@ export default function EditPreferencesScreen() {
   if (prefs.data) return <PreferencesFormView prefs={prefs.data} />;
 
   return (
-    <ModalScreen title="Preferencias" footer={<Button label="Guardar y actualizar mi búsqueda" onPress={() => undefined} disabled fullWidth />}>
+    <ModalScreen title="Lo que busco" footer={<Button label="Guardar y actualizar mi búsqueda" onPress={() => undefined} disabled fullWidth />}>
       {prefs.isError ? (
         <ErrorState message={prefs.error.message} onRetry={() => void prefs.refetch()} />
       ) : (
@@ -36,17 +35,21 @@ export default function EditPreferencesScreen() {
 function PreferencesFormView({ prefs }: { prefs: Preferences }) {
   const router = useRouter();
   const update = useUpdatePreferences();
-  const [draft, setDraft] = useState<PreferencesDraft>(() => draftFromPreferences(prefs));
+  const [initial] = useState<PreferencesDraft>(() => draftFromPreferences(prefs));
+  const [draft, setDraft] = useState<PreferencesDraft>(initial);
 
-  const { control, handleSubmit } = useForm<PreferencesForm>({
+  const { control, handleSubmit, formState } = useForm<PreferencesForm>({
     resolver: zodResolver(preferencesFormSchema),
     defaultValues: { minSalary: prefs.minSalary == null ? '' : String(prefs.minSalary) },
   });
+
+  const dirty = formState.isDirty || JSON.stringify(draft) !== JSON.stringify(initial);
 
   const save = handleSubmit((form) => {
     update.mutate(preferencesToInput(prefs, draft, form), {
       onSuccess: () => {
         haptics.success();
+        toast.show({ message: 'Listo. Actualizamos tus ofertas con tus nuevas preferencias.', tone: 'success' });
         if (router.canGoBack()) router.back();
       },
       onError: () => haptics.error(),
@@ -54,10 +57,14 @@ function PreferencesFormView({ prefs }: { prefs: Preferences }) {
   });
 
   return (
-    <ModalScreen title="Preferencias" footer={<Button label="Guardar y actualizar mi búsqueda" onPress={save} loading={update.isPending} fullWidth testID="preferences-save" />}>
-      <Text tone="muted">Tu agente usa esto para filtrar. Al guardar, revisa de nuevo todas las ofertas.</Text>
+    <ModalScreen
+      title="Lo que busco"
+      subtitle="Tu agente filtra con esto. Al guardar, revisa de nuevo todas las ofertas."
+      dirty={dirty}
+      footer={<Button label={dirty ? 'Guardar y actualizar mi búsqueda' : 'Sin cambios'} onPress={save} loading={update.isPending} disabled={!dirty} fullWidth testID="preferences-save" />}
+    >
       <PreferencesFields control={control} draft={draft} onChange={(key, value) => setDraft((d) => ({ ...d, [key]: value }))} />
-      {update.error ? <Card tone="muted"><Text tone="danger">{update.error.message}</Text></Card> : null}
+      {update.error ? <InlineError message={update.error.message} /> : null}
     </ModalScreen>
   );
 }

@@ -2,15 +2,16 @@ import { View } from 'react-native';
 
 import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
-import { useTheme } from './theme';
+import { fontFamily, useTheme } from './theme';
 
-export type BadgeTone = 'neutral' | 'brand' | 'success' | 'info' | 'warning' | 'danger' | 'accent';
+export type BadgeTone = 'neutral' | 'brand' | 'success' | 'info' | 'warning' | 'danger' | 'accent' | 'onHero';
 
 type BadgeProps = {
   label: string;
   tone?: BadgeTone;
   icon?: IconName;
   size?: 'md' | 'sm';
+  testID?: string;
 };
 
 export function useBadgeColors(tone: BadgeTone) {
@@ -22,15 +23,17 @@ export function useBadgeColors(tone: BadgeTone) {
     info: { bg: colors.infoTint, fg: colors.info },
     warning: { bg: colors.warningTint, fg: colors.warning },
     danger: { bg: colors.dangerTint, fg: colors.danger },
-    accent: { bg: colors.accentTint, fg: colors.warning },
+    accent: { bg: colors.accentTint, fg: colors.accent },
+    onHero: { bg: colors.onHeroTint, fg: colors.onHero },
   }[tone];
 }
 
-export function Badge({ label, tone = 'neutral', icon, size = 'md' }: BadgeProps) {
+export function Badge({ label, tone = 'neutral', icon, size = 'md', testID }: BadgeProps) {
   const { radius } = useTheme();
   const { bg, fg } = useBadgeColors(tone);
   return (
     <View
+      testID={testID}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -43,7 +46,7 @@ export function Badge({ label, tone = 'neutral', icon, size = 'md' }: BadgeProps
       }}
     >
       {icon ? <Icon name={icon} size={size === 'md' ? 14 : 12} color={fg} /> : null}
-      <Text variant="caption" style={{ color: fg, fontSize: size === 'md' ? 12.5 : 11.5, lineHeight: 16 }}>
+      <Text variant="caption" style={{ color: fg, fontSize: size === 'md' ? 12.5 : 11.5, lineHeight: 16, fontFamily: fontFamily.semibold }}>
         {label}
       </Text>
     </View>

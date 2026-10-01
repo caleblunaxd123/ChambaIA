@@ -77,7 +77,10 @@ public static class ResumeFileValidator
 
     public static string SafeDisplayName(string? filename, string extension)
     {
-        var name = Path.GetFileNameWithoutExtension(filename ?? "") ?? "";
+        // Some clients send the full local path; on Linux `Path` does not treat '\' as a separator, so cut both by hand.
+        var raw = filename ?? "";
+        var lastSeparator = raw.LastIndexOfAny(['/', '\\']);
+        var name = Path.GetFileNameWithoutExtension(lastSeparator >= 0 ? raw[(lastSeparator + 1)..] : raw);
         var cleaned = new string(name.Where(c => !char.IsControl(c) && c is not ('<' or '>' or '"' or '\\' or '/' or '|' or '?' or '*' or ':')).ToArray()).Trim();
         if (cleaned.Length == 0) cleaned = "cv";
         if (cleaned.Length > 80) cleaned = cleaned[..80];

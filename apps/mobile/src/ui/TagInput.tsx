@@ -83,7 +83,7 @@ export function ToggleRow({ label, description, value, onChange }: ToggleRowProp
           onChange(v);
         }}
         trackColor={{ false: colors.borderStrong, true: colors.primary }}
-        thumbColor="#FFFFFF"
+        thumbColor={colors.switchThumb}
       />
     </View>
   );

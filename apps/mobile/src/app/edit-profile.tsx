@@ -10,9 +10,9 @@ import { SkillEditor } from '@/features/profile/SkillEditor';
 import { type ProfileForm, formToProfileInput, profileFormSchema, profileToForm } from '@/features/profile/schemas';
 import { educationLabel } from '@/lib/format';
 import { haptics } from '@/lib/haptics';
+import { toast } from '@/state/toast-store';
 import { Button } from '@/ui/Button';
-import { Card } from '@/ui/Card';
-import { ErrorState } from '@/ui/EmptyState';
+import { ErrorState, InlineError } from '@/ui/EmptyState';
 import { FormInput } from '@/ui/Input';
 import { ModalScreen } from '@/ui/ModalScreen';
 import { Select } from '@/ui/Select';
@@ -49,15 +49,17 @@ function ProfileFormView({ profile }: { profile: Profile }) {
   const [level, setLevel] = useState<EducationLevel | null>(profile.educationLevel);
   const [status, setStatus] = useState<EducationStatus | null>(profile.educationStatus);
 
-  const { control, handleSubmit } = useForm<ProfileForm>({
+  const { control, handleSubmit, formState } = useForm<ProfileForm>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: profileToForm(profile),
   });
+  const dirty = formState.isDirty || skills !== profile.skills || level !== profile.educationLevel || status !== profile.educationStatus;
 
   const save = handleSubmit((form) => {
     update.mutate(formToProfileInput(form, profile, { skills, educationLevel: level, educationStatus: status }), {
       onSuccess: () => {
         haptics.success();
+        toast.show({ message: 'Perfil guardado. Tu agente ya está revisando tus ofertas.', tone: 'success' });
         if (router.canGoBack()) router.back();
       },
       onError: () => haptics.error(),
@@ -65,8 +67,12 @@ function ProfileFormView({ profile }: { profile: Profile }) {
   });
 
   return (
-    <ModalScreen title="Tu perfil" footer={<Button label="Guardar perfil" onPress={save} loading={update.isPending} fullWidth testID="profile-save" />}>
-      <Text tone="muted">Esto es lo que tu agente sabe de ti. Siempre puedes corregirlo: nunca damos nada por cierto.</Text>
+    <ModalScreen
+      title="Tu perfil"
+      subtitle="Lo que tu agente sabe de ti. Siempre puedes corregirlo."
+      dirty={dirty}
+      footer={<Button label={dirty ? 'Guardar perfil' : 'Sin cambios'} onPress={save} loading={update.isPending} disabled={!dirty} fullWidth testID="profile-save" />}
+    >
 
       <View style={{ gap: 14 }}>
         <FormInput control={control} name="fullName" label="Nombre completo" icon="person-outline" autoCapitalize="words" />
@@ -75,6 +81,7 @@ function ProfileFormView({ profile }: { profile: Profile }) {
 
       <View style={{ gap: 10 }}>
         <Text variant="heading">Experiencia total</Text>
+        <Text variant="caption" tone="muted">Suma todos tus trabajos. Tu agente la compara con lo que pide cada oferta.</Text>
         <View style={{ flexDirection: 'row', gap: 12 }}>
           <View style={{ flex: 1 }}><FormInput control={control} name="years" label="Años" keyboardType="number-pad" suffix="años" /></View>
           <View style={{ flex: 1 }}><FormInput control={control} name="months" label="Meses" keyboardType="number-pad" suffix="meses" /></View>
@@ -92,7 +99,7 @@ function ProfileFormView({ profile }: { profile: Profile }) {
         <SkillEditor skills={skills} onChange={setSkills} />
       </View>
 
-      {update.error ? <Card tone="muted"><Text tone="danger">{update.error.message}</Text></Card> : null}
+      {update.error ? <InlineError message={update.error.message} /> : null}
     </ModalScreen>
   );
 }

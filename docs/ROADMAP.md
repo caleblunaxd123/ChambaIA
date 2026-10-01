@@ -35,7 +35,9 @@ Leyenda: [x] hecho · [ ] pendiente
 - [ ] Expo Push, registro de dispositivos, resúmenes por frecuencia, recálculo incremental tras ingesta
 
 ## Fase 7 — Tracker
-- [ ] Fechas de entrevista con selector, recordatorios, métricas
+- [x] Fechas de entrevista con selector (días + horarios, sin módulo nativo), próxima entrevista en Inicio
+- [x] Avance de etapa en un toque con deshacer
+- [ ] Recordatorios (requiere push, fase 6), métricas
 
 ## Fase 8 — Proveedores de IA
 - [ ] `IAiProvider`, router por tarea, límites diarios/mensuales, circuit breaker, `AiUsage`, dashboard de costos
@@ -46,5 +48,10 @@ Leyenda: [x] hecho · [ ] pendiente
 ## Fase 10 — Fuentes reales
 - [ ] Conectores por API/feeds/páginas públicas respetando robots.txt y términos (ver JOB-SOURCES.md)
 
+## UX transversal ✅
+- [x] Modo oscuro con preferencia persistida (Automático / Claro / Oscuro)
+- [x] Pantalla de bienvenida, toasts con «Deshacer» (`POST /matches/{jobId}/reset`), mutaciones optimistas
+- [x] Fuerza del perfil con siguiente paso, accesos directos filtrados, aviso de cambios sin guardar, 404
+
 ## Transversal pendiente
-- [ ] Dark mode, íconos/splash propios, E2E móvil, CI
+- [ ] Íconos/splash propios, E2E móvil en CI, CI

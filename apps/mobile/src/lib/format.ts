@@ -77,3 +77,80 @@ export const categoryOrder: MatchCategory[] = ['excellent', 'veryCompatible', 'c
 export function firstName(fullName: string | undefined): string {
   return (fullName ?? '').trim().split(/\s+/)[0] ?? '';
 }
+
+/** "Importadora Pacífico" → "IP", "Areli" → "AR". Used by avatars when there is no logo. */
+export function initials(name: string): string {
+  const words = name.trim().split(/\s+/).filter((w) => /\p{L}|\d/u.test(w.charAt(0)));
+  if (words.length === 0) return '?';
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
+}
+
+/** Stable index in [0, size) for a string, so the same company always gets the same colour. */
+export function pickIndex(text: string, size: number): number {
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) hash = (hash * 31 + text.charCodeAt(i)) | 0;
+  return Math.abs(hash) % size;
+}
+
+/** "Buenos días" / "Buenas tardes" / "Buenas noches" by local hour. */
+export function greeting(now: Date = new Date()): string {
+  const h = now.getHours();
+  if (h >= 5 && h < 12) return 'Buenos días';
+  if (h >= 12 && h < 19) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+
+const WEEKDAYS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic'];
+
+/** "Hoy", "Mañana" or "vie 3 oct". */
+export function formatDayLabel(date: Date, now: Date = new Date()): string {
+  const day = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const diff = Math.round((day(date) - day(now)) / 86_400_000);
+  if (diff === 0) return 'Hoy';
+  if (diff === 1) return 'Mañana';
+  if (diff === -1) return 'Ayer';
+  return `${WEEKDAYS[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]}`;
+}
+
+/** "Hoy, 10:30" / "vie 3 oct, 15:00" (local time, 24 h as is usual in Peru). */
+export function formatDateTime(iso: string | null, now: Date = new Date()): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const time = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  return `${formatDayLabel(date, now)}, ${time}`;
+}
+
+/** The natural next step on the tracker board; null when the card is at the end of the road. */
+export const nextApplicationStage: Record<ApplicationStatus, ApplicationStatus | null> = {
+  found: 'interested',
+  interested: 'applied',
+  applied: 'interview',
+  interview: 'offer',
+  offer: null,
+  discarded: null,
+};
+
+/** Label of the one-tap button that moves a card to its next stage. */
+export const nextStageAction: Partial<Record<ApplicationStatus, string>> = {
+  found: 'Me interesa',
+  interested: 'Ya postulé',
+  applied: 'Me llamaron a entrevista',
+  interview: 'Recibí una oferta',
+};
+
+export function plural(count: number, one: string, many: string): string {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
+/** The closest interview that has not happened yet (an hour of grace, so "today at 10:00" still shows at 10:30). */
+export function nextInterview<T extends { status: ApplicationStatus; interviewDate: string | null }>(applications: readonly T[], now: Date = new Date()): T | null {
+  const from = now.getTime() - 3_600_000;
+  return (
+    applications
+      .filter((a) => a.status === 'interview' && a.interviewDate && new Date(a.interviewDate).getTime() > from)
+      .sort((a, b) => new Date(a.interviewDate as string).getTime() - new Date(b.interviewDate as string).getTime())[0] ?? null
+  );
+}

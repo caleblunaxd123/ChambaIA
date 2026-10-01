@@ -9,10 +9,11 @@ import type { DetectedResume, EducationLevel, EducationStatus, Overview, Skill }
 import { SkillEditor } from '@/features/profile/SkillEditor';
 import { educationLabel } from '@/lib/format';
 import { Button } from '@/ui/Button';
-import { Card } from '@/ui/Card';
+import { Card, HeroSurface } from '@/ui/Card';
 import { Chip } from '@/ui/Chip';
 import { FormInput, Input } from '@/ui/Input';
-import { Icon } from '@/ui/Icon';
+import { InlineError } from '@/ui/EmptyState';
+import { Icon, type IconName } from '@/ui/Icon';
 import { Select } from '@/ui/Select';
 import { Skeleton } from '@/ui/Skeleton';
 import { TagInput } from '@/ui/TagInput';
@@ -42,7 +43,7 @@ export function AboutStep({ fullName, homeDistrict, onSubmit }: AboutProps) {
 
   return (
     <View style={{ gap: 20 }}>
-      <Heading title="Cuéntanos sobre ti" subtitle="Unos datos para que tu agente empiece con el pie derecho." />
+      <Heading icon="hand-left-outline" title="Cuéntanos sobre ti" subtitle="Unos datos para que tu agente empiece con el pie derecho." />
       <FormInput control={control} name="fullName" label="¿Cómo te llamas?" icon="person-outline" autoCapitalize="words" />
       <FormInput control={control} name="desiredRole" label="¿Qué trabajo buscas? (opcional)" icon="briefcase-outline" placeholder="Ej.: Asistente administrativa" hint="Puedes cambiarlo o agregar más cargos después." />
       <Select
@@ -53,7 +54,7 @@ export function AboutStep({ fullName, homeDistrict, onSubmit }: AboutProps) {
         clearLabel="Prefiero no indicarlo"
         placeholder="Selecciona tu distrito"
       />
-      <Button label="Continuar" onPress={handleSubmit((v) => onSubmit({ ...v, homeDistrict: district }))} fullWidth testID="onboarding-about-next" />
+      <Button label="Continuar" trailingIcon="arrow-forward" onPress={handleSubmit((v) => onSubmit({ ...v, homeDistrict: district }))} fullWidth testID="onboarding-about-next" />
     </View>
   );
 }
@@ -66,27 +67,35 @@ export function CvStep({ error, onPick, onManual }: CvProps) {
   const { colors, radius } = useTheme();
   return (
     <View style={{ gap: 20 }}>
-      <Heading title="Sube tu CV una sola vez" subtitle="Lo leeremos por ti: así no tienes que llenar nada a mano." />
+      <Heading icon="document-text-outline" title="Sube tu CV una sola vez" subtitle="Lo leemos por ti: así no tienes que llenar nada a mano." />
 
-      <Card style={{ alignItems: 'center', gap: 14, paddingVertical: 28, borderStyle: 'dashed', borderColor: colors.borderStrong, borderWidth: 1.5, borderRadius: radius.xl }}>
-        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.primaryTint, alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name="document-text-outline" size={34} tone="primary" />
+      <Card style={{ alignItems: 'center', gap: 14, paddingVertical: 28, borderStyle: 'dashed', borderColor: colors.primary, borderWidth: 1.5, borderRadius: radius.xl, backgroundColor: colors.primaryTint }}>
+        <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="cloud-upload-outline" size={36} tone="primary" />
         </View>
-        <Text variant="heading">PDF o Word (.docx)</Text>
-        <Text variant="caption" tone="muted" style={{ textAlign: 'center' }}>Hasta 5 MB. Si es una foto o un escaneo, sube el archivo original.</Text>
-        <Button label="Elegir mi CV" icon="cloud-upload-outline" onPress={onPick} testID="onboarding-pick-cv" style={{ alignSelf: 'center' }} />
+        <View style={{ alignItems: 'center', gap: 4 }}>
+          <Text variant="heading">PDF o Word (.docx)</Text>
+          <Text variant="caption" tone="muted" style={{ textAlign: 'center' }}>Hasta 5 MB. Si es una foto o un escaneo, sube el archivo original.</Text>
+        </View>
+        <Button label="Elegir mi CV" icon="folder-open-outline" onPress={onPick} testID="onboarding-pick-cv" style={{ alignSelf: 'center' }} />
       </Card>
 
-      {error ? (
-        <Card tone="muted"><Text tone="danger" testID="onboarding-cv-error">{error}</Text></Card>
-      ) : null}
+      {error ? <InlineError message={error} testID="onboarding-cv-error" /> : null}
 
-      <View style={{ gap: 6 }}>
-        <Text variant="caption" tone="muted" style={{ textAlign: 'center' }}>
-          Tu CV se analiza una sola vez en nuestros servidores y puedes eliminarlo cuando quieras desde tu perfil.
-        </Text>
-        <Button label="Prefiero llenarlo a mano" variant="ghost" onPress={onManual} fullWidth testID="onboarding-manual" />
+      <View style={{ gap: 10 }}>
+        {[
+          { icon: 'flash-outline' as const, text: 'Detectamos tu experiencia, estudios y habilidades en segundos.' },
+          { icon: 'create-outline' as const, text: 'Tú revisas y corriges todo antes de guardarlo.' },
+          { icon: 'shield-checkmark-outline' as const, text: 'Se analiza una sola vez y puedes eliminarlo cuando quieras.' },
+        ].map((b) => (
+          <View key={b.text} style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+            <Icon name={b.icon} size={18} tone="primary" />
+            <Text variant="caption" tone="muted" style={{ flex: 1 }}>{b.text}</Text>
+          </View>
+        ))}
       </View>
+
+      <Button label="Prefiero llenarlo a mano" variant="ghost" onPress={onManual} fullWidth testID="onboarding-manual" />
     </View>
   );
 }
@@ -159,12 +168,13 @@ export function ReviewStep({ draft, detected, onChange, onContinue, saving, erro
   return (
     <View style={{ gap: 24 }}>
       <Heading
+        icon={detected ? 'checkmark-done-outline' : 'briefcase-outline'}
         title={detected ? 'Esto es lo que encontramos' : 'Cuéntanos tu experiencia'}
         subtitle={detected ? 'Revísalo con calma: puedes corregir, quitar o agregar lo que quieras. Nada se guarda hasta que lo confirmes.' : 'Completa lo que sepas. Siempre podrás cambiarlo después.'}
       />
 
       {detected && detected.warnings.length > 0 ? (
-        <Card tone="muted" style={{ gap: 8 }} testID="onboarding-warnings">
+        <Card tone="muted" style={{ gap: 8, backgroundColor: colors.warningTint }} testID="onboarding-warnings">
           {detected.warnings.map((w) => (
             <View key={w} style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
               <Icon name="information-circle" size={18} tone="warning" />
@@ -227,8 +237,8 @@ export function ReviewStep({ draft, detected, onChange, onContinue, saving, erro
         </Block>
       ) : null}
 
-      {error ? <Card tone="muted"><Text tone="danger">{error}</Text></Card> : null}
-      <Button label="Todo bien, continuar" onPress={onContinue} loading={saving} fullWidth testID="onboarding-review-next" />
+      {error ? <InlineError message={error} /> : null}
+      <Button label="Todo bien, continuar" trailingIcon="arrow-forward" onPress={onContinue} loading={saving} fullWidth testID="onboarding-review-next" />
     </View>
   );
 }
@@ -238,38 +248,49 @@ export function ReviewStep({ draft, detected, onChange, onContinue, saving, erro
 export function ReadyStep({ overview, loading, saving, onFinish, firstName }: { overview: Overview | undefined; loading: boolean; saving: boolean; onFinish: () => void; firstName: string }) {
   const { colors } = useTheme();
   return (
-    <View style={{ alignItems: 'center', gap: 20, paddingTop: 24 }} testID="onboarding-ready">
-      <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: colors.successTint, alignItems: 'center', justifyContent: 'center' }}>
-        <Icon name="checkmark-circle" size={56} tone="success" />
-      </View>
-      <View style={{ gap: 6, alignItems: 'center' }}>
-        <Text variant="display" style={{ textAlign: 'center' }}>Tu agente está listo{firstName ? `, ${firstName}` : ''}</Text>
-        <Text tone="muted" style={{ textAlign: 'center' }}>Ya empezó a revisar las ofertas con lo que nos contaste. Seguirá buscando aunque cierres la app.</Text>
-      </View>
+    <View style={{ gap: 20, paddingTop: 8 }} testID="onboarding-ready">
+      <HeroSurface style={{ padding: 24, gap: 14, alignItems: 'center' }}>
+        <View style={{ width: 84, height: 84, borderRadius: 42, backgroundColor: colors.onHeroTint, alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="checkmark-circle" size={52} tone="onHero" />
+        </View>
+        <Text variant="display" tone="onHero" style={{ textAlign: 'center' }}>Tu agente está listo{firstName ? `, ${firstName}` : ''}</Text>
+        <Text tone="onHero" style={{ textAlign: 'center', opacity: 0.88 }}>Ya empezó a revisar las ofertas con lo que nos contaste. Seguirá buscando aunque cierres la app.</Text>
+      </HeroSurface>
 
-      <Card style={{ width: '100%', gap: 10 }}>
+      <Card style={{ width: '100%', gap: 12 }}>
         {loading || !overview ? (
           <Skeleton height={44} radius={12} />
         ) : (
           <>
             <Text variant="heading">Para empezar, encontramos</Text>
-            <Row icon="star" color={colors.success} text={`${overview.strong} que encajan muy bien contigo`} />
-            <Row icon="checkmark-circle" color={colors.info} text={`${overview.possible} con requisitos que podrías cumplir`} />
-            <Row icon="eye" color={colors.warning} text={`${overview.review} para revisar con calma`} />
+            {overview.strong > 0 ? <Row icon="star" color={colors.success} bg={colors.successTint} value={overview.strong} text={overview.strong === 1 ? 'que encaja muy bien contigo' : 'que encajan muy bien contigo'} /> : null}
+            {overview.possible > 0 ? <Row icon="checkmark-circle" color={colors.info} bg={colors.infoTint} value={overview.possible} text="con requisitos que podrías cumplir" /> : null}
+            {overview.review > 0 ? <Row icon="eye" color={colors.warning} bg={colors.warningTint} value={overview.review} text="para revisar con calma" /> : null}
+            {overview.strong + overview.possible + overview.review === 0 ? (
+              <Text tone="muted">Todavía nada que encaje. Tu agente seguirá buscando y te avisará apenas aparezca algo para ti.</Text>
+            ) : overview.strong === 0 ? (
+              <Text variant="caption" tone="muted">Tip: sube tu CV o agrega habilidades para que tu agente encuentre coincidencias más fuertes.</Text>
+            ) : null}
           </>
         )}
       </Card>
 
-      <Button label="Ver mis oportunidades" icon="arrow-forward" onPress={onFinish} loading={saving} fullWidth testID="onboarding-finish" />
+      <Button label="Ver mis oportunidades" trailingIcon="arrow-forward" onPress={onFinish} loading={saving} fullWidth testID="onboarding-finish" />
     </View>
   );
 }
 
 // ---------------------------------------------------------------- shared bits
 
-export function Heading({ title, subtitle }: { title: string; subtitle: string }) {
+export function Heading({ title, subtitle, icon }: { title: string; subtitle: string; icon?: IconName }) {
+  const { colors } = useTheme();
   return (
     <View style={{ gap: 6 }}>
+      {icon ? (
+        <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: colors.primaryTint, alignItems: 'center', justifyContent: 'center', marginBottom: 6 }}>
+          <Icon name={icon} size={24} tone="primary" />
+        </View>
+      ) : null}
       <Text variant="display">{title}</Text>
       <Text tone="muted">{subtitle}</Text>
     </View>
@@ -290,14 +311,16 @@ function Block({ title, hint, children }: { title: string; hint?: string; childr
 
 function NumberField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   // Digits only, so the draft always holds a valid number.
-  return <Input label={label} value={value} onChangeText={(v) => onChange(v.replace(/D/g, '').slice(0, 2))} keyboardType="number-pad" suffix={label.toLowerCase()} />;
+  return <Input label={label} value={value} onChangeText={(v) => onChange(v.replace(/\D/g, '').slice(0, 2))} keyboardType="number-pad" suffix={label.toLowerCase()} />;
 }
 
-function Row({ icon, color, text }: { icon: 'star' | 'checkmark-circle' | 'eye'; color: string; text: string }) {
+function Row({ icon, color, bg, value, text }: { icon: IconName; color: string; bg: string; value: number; text: string }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-      <Icon name={icon} size={20} color={color} />
-      <Text>{text}</Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name={icon} size={18} color={color} />
+      </View>
+      <Text style={{ flex: 1 }}><Text variant="bodyStrong" style={{ color }}>{value}</Text> {text}</Text>
     </View>
   );
 }

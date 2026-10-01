@@ -1,35 +1,29 @@
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import type { ApplicationStatus, JobApplication } from '@/api/schemas';
 import { useApplications, usePatchApplication, useRemoveApplication } from '@/api/queries';
-import { APPLICATION_STAGES, ApplicationSheet } from '@/features/applications/ApplicationSheet';
-import { applicationStatusLabel, formatRelativeTime, formatSalary } from '@/lib/format';
+import { ApplicationSheet } from '@/features/applications/ApplicationSheet';
+import { APPLICATION_STAGES, stageStyle } from '@/features/applications/stages';
+import { applicationStatusLabel, formatDateTime, formatRelativeTime, formatSalary, nextApplicationStage, nextStageAction } from '@/lib/format';
 import { haptics } from '@/lib/haptics';
-import { Badge, type BadgeTone } from '@/ui/Badge';
-import { Button } from '@/ui/Button';
+import { toast } from '@/state/toast-store';
+import { Avatar } from '@/ui/Avatar';
+import { useBadgeColors } from '@/ui/Badge';
+import { Button, IconButton } from '@/ui/Button';
 import { Card } from '@/ui/Card';
-import { SegmentedTabs } from '@/ui/Chip';
 import { EmptyState, ErrorState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Screen } from '@/ui/Screen';
 import { JobListSkeleton } from '@/ui/Skeleton';
 import { Text } from '@/ui/Text';
-
-const stageTone: Record<ApplicationStatus, BadgeTone> = {
-  found: 'neutral',
-  interested: 'brand',
-  applied: 'info',
-  interview: 'accent',
-  offer: 'success',
-  discarded: 'danger',
-};
+import { fontFamily, useTheme } from '@/ui/theme';
 
 const emptyCopy: Record<ApplicationStatus, { title: string; message: string }> = {
-  found: { title: 'Nada por aquí', message: 'Las ofertas que encuentres y quieras seguir aparecerán en esta etapa.' },
-  interested: { title: 'Aún no marcas ofertas como «Me interesa»', message: 'Cuando guardes una oferta, la verás aquí lista para postular.' },
-  applied: { title: 'Todavía no registras postulaciones', message: 'Después de postular en la página oficial, marca la oferta como postulada para hacerle seguimiento.' },
+  found: { title: 'Nada por aquí', message: 'Las ofertas que quieras seguir sin decidir todavía aparecerán en esta etapa.' },
+  interested: { title: 'Aún no guardas ofertas', message: 'Toca «Guardar» en una oferta y la verás aquí, lista para postular.' },
+  applied: { title: 'Todavía no registras postulaciones', message: 'Después de postular en la página oficial, márcala como postulada para hacerle seguimiento.' },
   interview: { title: 'Sin entrevistas por ahora', message: 'Cuando te citen, mueve la postulación a esta etapa y anota la fecha.' },
   offer: { title: 'Aún no hay ofertas recibidas', message: 'Tu próxima oferta de trabajo aparecerá aquí. ¡Ánimo!' },
   discarded: { title: 'Nada descartado', message: 'Las ofertas que descartes después de revisarlas se guardan aquí.' },
@@ -50,55 +44,62 @@ export default function ApplicationsScreen() {
     return c;
   }, [list]);
 
-  // Open on the first stage that has cards, so the board never greets the user with an empty column.
-  const stage = selectedStage ?? APPLICATION_STAGES.find((s) => counts[s] > 0) ?? 'interested';
+  // Open on the most advanced stage that has cards, so the board greets the user with what matters most.
+  const stage = selectedStage ?? (['offer', 'interview', 'applied', 'interested', 'found'] as const).find((s) => counts[s] > 0) ?? 'interested';
   const visible = list.filter((a) => a.status === stage);
+  const active = list.filter((a) => a.status !== 'discarded').length;
+
+  const advance = (a: JobApplication) => {
+    const next = nextApplicationStage[a.status];
+    if (!next) return;
+    // Interviews need a date: open the sheet already on that stage instead of moving blindly.
+    if (next === 'interview') {
+      setEditing({ ...a, status: 'interview' });
+      return;
+    }
+    patch.mutate(
+      { id: a.id, status: next },
+      {
+        onSuccess: () => {
+          haptics.success();
+          toast.show({
+            message: next === 'offer' ? '¡Felicitaciones! 🎉' : `Movida a «${applicationStatusLabel[next]}»`,
+            tone: 'success',
+            action: { label: 'Deshacer', onPress: () => patch.mutate({ id: a.id, status: a.status }) },
+          });
+        },
+        onError: (error) => toast.show({ message: error.message, tone: 'danger' }),
+      },
+    );
+  };
 
   return (
     <Screen onRefresh={() => void apps.refetch()} refreshing={apps.isRefetching}>
       <View style={{ gap: 4 }}>
         <Text variant="display">Postulaciones</Text>
-        <Text tone="muted">Sigue cada oferta desde que te interesa hasta que recibes respuesta.</Text>
+        <Text tone="muted">
+          {active > 0 ? `${active} ${active === 1 ? 'oferta en seguimiento' : 'ofertas en seguimiento'}. Muévelas de etapa a medida que avanzas.` : 'Sigue cada oferta desde que te interesa hasta que recibes respuesta.'}
+        </Text>
       </View>
 
-      <SegmentedTabs
-        scrollable
-        value={stage}
-        onChange={setSelectedStage}
-        options={APPLICATION_STAGES.map((s) => ({ value: s, label: applicationStatusLabel[s], count: counts[s] }))}
-      />
+      <StagePicker counts={counts} value={stage} onChange={setSelectedStage} />
 
       {apps.isLoading ? (
         <JobListSkeleton count={2} />
       ) : apps.isError ? (
         <ErrorState message={apps.error.message} onRetry={() => void apps.refetch()} />
       ) : visible.length === 0 ? (
-        <EmptyState icon="paper-plane-outline" title={emptyCopy[stage].title} message={emptyCopy[stage].message} actionLabel={list.length === 0 ? 'Explorar empleos' : undefined} onAction={() => router.navigate('/jobs')} />
+        <EmptyState
+          icon={stageStyle[stage].icon}
+          title={emptyCopy[stage].title}
+          message={emptyCopy[stage].message}
+          actionLabel={list.length === 0 || stage === 'interested' ? 'Explorar empleos' : undefined}
+          onAction={() => router.navigate('/jobs')}
+        />
       ) : (
         <View style={{ gap: 12 }}>
           {visible.map((a) => (
-            <Card key={a.id} onPress={() => setEditing(a)} testID={`application-${a.id}`} style={{ gap: 10 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text variant="heading" numberOfLines={2}>{a.job?.title ?? 'Oferta'}</Text>
-                  <Text tone="muted" numberOfLines={1}>{a.job?.company}{a.job?.district ? ` · ${a.job.district}` : ''}</Text>
-                </View>
-                <Badge label={applicationStatusLabel[a.status]} tone={stageTone[a.status]} />
-              </View>
-
-              {a.job && formatSalary(a.job) ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Icon name="cash-outline" size={15} tone="subtle" />
-                  <Text variant="caption" tone="muted">{formatSalary(a.job)}</Text>
-                </View>
-              ) : null}
-
-              <Text variant="caption" tone="subtle">
-                {a.appliedAt ? `Postulaste ${formatRelativeTime(a.appliedAt)}` : `Actualizada ${formatRelativeTime(a.updatedAt)}`}
-              </Text>
-              {a.notes ? <Text variant="caption" tone="muted" numberOfLines={2}>📝 {a.notes}</Text> : null}
-              <Button label="Actualizar" size="sm" variant="secondary" icon="swap-horizontal" onPress={() => setEditing(a)} />
-            </Card>
+            <ApplicationCard key={a.id} application={a} busy={patch.isPending} onEdit={() => setEditing(a)} onAdvance={() => advance(a)} />
           ))}
         </View>
       )}
@@ -110,10 +111,11 @@ export default function ApplicationsScreen() {
         onOpenJob={(jobId) => router.push({ pathname: '/job/[id]', params: { id: jobId } })}
         onSave={(id, changes) =>
           patch.mutate(
-            { id, status: changes.status, notes: changes.notes },
+            { id, status: changes.status, notes: changes.notes, interviewDate: changes.interviewDate },
             {
               onSuccess: (updated) => {
                 haptics.success();
+                toast.show({ message: 'Seguimiento actualizado', tone: 'success' });
                 setSelectedStage(updated.status);
                 setEditing(null);
               },
@@ -124,6 +126,7 @@ export default function ApplicationsScreen() {
         onRemove={(id) =>
           remove.mutate(id, {
             onSuccess: () => {
+              toast.show({ message: 'La quitamos de tu tablero' });
               setEditing(null);
               setSelectedStage(null);
             },
@@ -131,5 +134,107 @@ export default function ApplicationsScreen() {
         }
       />
     </Screen>
+  );
+}
+
+function StagePicker({ counts, value, onChange }: { counts: Record<ApplicationStatus, number>; value: ApplicationStatus; onChange: (s: ApplicationStatus) => void }) {
+  const { spacing } = useTheme();
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginHorizontal: -spacing.lg }} contentContainerStyle={{ gap: 8, paddingHorizontal: spacing.lg }}>
+      {APPLICATION_STAGES.map((s) => (
+        <StageTile key={s} stage={s} count={counts[s]} selected={s === value} onPress={() => onChange(s)} />
+      ))}
+    </ScrollView>
+  );
+}
+
+function StageTile({ stage, count, selected, onPress }: { stage: ApplicationStatus; count: number; selected: boolean; onPress: () => void }) {
+  const { colors, radius } = useTheme();
+  const { bg, fg } = useBadgeColors(stageStyle[stage].tone);
+  return (
+    <Pressable
+      accessibilityRole="tab"
+      accessibilityState={{ selected }}
+      accessibilityLabel={`${applicationStatusLabel[stage]}: ${count}`}
+      testID={`tab-${stage}`}
+      onPress={() => {
+        if (!selected) haptics.tap();
+        onPress();
+      }}
+      style={{
+        width: 104,
+        padding: 12,
+        gap: 8,
+        borderRadius: radius.lg,
+        backgroundColor: colors.surface,
+        borderWidth: 1.5,
+        borderColor: selected ? fg : colors.border,
+      }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ width: 28, height: 28, borderRadius: 9, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name={stageStyle[stage].icon} size={15} color={fg} />
+        </View>
+        <Text variant="title" style={{ color: count > 0 ? colors.text : colors.textSubtle }}>{count}</Text>
+      </View>
+      <Text variant="caption" tone={selected ? 'default' : 'muted'} style={{ fontFamily: selected ? fontFamily.bold : fontFamily.medium }} numberOfLines={1}>
+        {applicationStatusLabel[stage]}
+      </Text>
+    </Pressable>
+  );
+}
+
+function ApplicationCard({ application: a, busy, onEdit, onAdvance }: { application: JobApplication; busy: boolean; onEdit: () => void; onAdvance: () => void }) {
+  const { colors, radius } = useTheme();
+  const salary = a.job ? formatSalary(a.job) : null;
+  const nextLabel = nextStageAction[a.status];
+  const upcoming = a.status === 'interview' && a.interviewDate;
+
+  return (
+    <Card padded={false} testID={`application-${a.id}`}>
+      <Pressable onPress={onEdit} accessibilityRole="button" accessibilityLabel={`${a.job?.title ?? 'Oferta'}. Editar seguimiento`} style={({ pressed }) => ({ padding: 16, gap: 12, borderRadius: radius.lg, backgroundColor: pressed ? colors.surfaceMuted : 'transparent' })}>
+        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+          <Avatar name={a.job?.company ?? '?'} size={44} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text variant="heading" numberOfLines={2}>{a.job?.title ?? 'Oferta'}</Text>
+            <Text variant="caption" tone="muted" numberOfLines={1}>{a.job?.company}{a.job?.district ? ` · ${a.job.district}` : ''}</Text>
+          </View>
+          <Icon name="ellipsis-horizontal" size={20} tone="subtle" />
+        </View>
+
+        {upcoming ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: radius.md, backgroundColor: colors.accentTint }}>
+            <Icon name="calendar" size={16} tone="accent" />
+            <Text variant="caption" style={{ fontFamily: fontFamily.bold }}>Entrevista: {formatDateTime(a.interviewDate)}</Text>
+          </View>
+        ) : null}
+
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 12, rowGap: 4 }}>
+          {salary ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <Icon name="cash-outline" size={14} tone="subtle" />
+              <Text variant="caption" tone="muted">{salary}</Text>
+            </View>
+          ) : null}
+          <Text variant="caption" tone="subtle">
+            {a.appliedAt ? `Postulaste ${formatRelativeTime(a.appliedAt)}` : `Actualizada ${formatRelativeTime(a.updatedAt)}`}
+          </Text>
+        </View>
+
+        {a.notes ? (
+          <View style={{ flexDirection: 'row', gap: 6, alignItems: 'flex-start' }}>
+            <Icon name="document-text-outline" size={14} tone="subtle" />
+            <Text variant="caption" tone="muted" numberOfLines={2} style={{ flex: 1 }}>{a.notes}</Text>
+          </View>
+        ) : null}
+      </Pressable>
+
+      {nextLabel ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border }}>
+          <Button label={nextLabel} icon="arrow-forward-circle-outline" size="sm" variant="tonal" onPress={onAdvance} disabled={busy} testID={`advance-${a.id}`} style={{ flex: 1 }} fullWidth />
+          <IconButton icon="create-outline" label="Editar seguimiento" size={38} variant="ghost" onPress={onEdit} />
+        </View>
+      ) : null}
+    </Card>
   );
 }

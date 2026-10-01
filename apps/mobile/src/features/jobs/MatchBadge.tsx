@@ -15,5 +15,5 @@ export const categoryStyle: Record<MatchCategory, CategoryStyle> = {
 /** Compatibility as a category + icon (never a percentage). Colour is never the only signal: the label is always shown. */
 export function MatchBadge({ category, size = 'md' }: { category: MatchCategory; size?: 'md' | 'sm' }) {
   const s = categoryStyle[category];
-  return <Badge label={s.label.toUpperCase()} tone={s.tone} icon={s.icon} size={size} />;
+  return <Badge label={s.label} tone={s.tone} icon={s.icon} size={size} testID={`match-${category}`} />;
 }

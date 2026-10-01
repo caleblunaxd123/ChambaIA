@@ -121,9 +121,12 @@ async function toApiError(response: Response): Promise<ApiError> {
   const firstFieldError = Object.values(fieldErrors)[0]?.[0];
   const fallback =
     response.status === 401 ? 'Tu sesión expiró. Inicia sesión de nuevo.'
+    : response.status === 404 ? 'No encontramos lo que buscabas. Puede que ya no esté disponible.'
     : response.status === 429 ? 'Demasiados intentos. Espera un momento e inténtalo otra vez.'
     : response.status >= 500 ? 'El servidor tuvo un problema. Inténtalo en unos minutos.'
     : 'No pudimos completar la acción.';
 
-  return new ApiError(firstFieldError ?? problem.detail ?? problem.title ?? fallback, response.status, fieldErrors);
+  // Our own errors always carry a Spanish `detail`. A bare `title` is the framework default ("Not Found"), in English:
+  // never show it to the user.
+  return new ApiError(firstFieldError ?? problem.detail ?? fallback, response.status, fieldErrors);
 }

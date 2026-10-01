@@ -4,21 +4,30 @@ import { View } from 'react-native';
 
 import { useClearHistory, useDeleteResume, usePreferences, useProfile, useResumes } from '@/api/queries';
 import { logout, useDeleteAccount } from '@/features/auth/useAuthActions';
-import { educationLabel, firstName, formatDuration, formatRelativeTime, formatMoney, frequencyLabel, modalityLabel, skillLevelLabel } from '@/lib/format';
+import { educationLabel, formatDuration, formatMoney, formatRelativeTime, frequencyLabel, modalityLabel, skillLevelLabel } from '@/lib/format';
 import { haptics } from '@/lib/haptics';
+import { profileStrength } from '@/lib/profile-strength';
+import { type AppearancePreference, useAppearance } from '@/state/appearance-store';
 import { useAuthStore } from '@/state/auth-store';
+import { toast } from '@/state/toast-store';
+import { Avatar } from '@/ui/Avatar';
 import { Badge } from '@/ui/Badge';
 import { BottomSheet } from '@/ui/BottomSheet';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
+import { SegmentedTabs } from '@/ui/Chip';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
-import { ErrorState } from '@/ui/EmptyState';
-import { Icon, type IconName } from '@/ui/Icon';
+import { ErrorState, InlineError } from '@/ui/EmptyState';
+import { Icon } from '@/ui/Icon';
 import { Input } from '@/ui/Input';
+import { ListGroup, ListRow } from '@/ui/ListRow';
+import { ProgressBar } from '@/ui/ProgressBar';
 import { Screen } from '@/ui/Screen';
 import { Skeleton } from '@/ui/Skeleton';
 import { Text } from '@/ui/Text';
-import { useTheme } from '@/ui/theme';
+import { fontFamily, useTheme } from '@/ui/theme';
+
+const SKILLS_PREVIEW = 8;
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -26,11 +35,13 @@ export default function ProfileScreen() {
   const user = useAuthStore((s) => s.user);
   const profile = useProfile();
   const prefs = usePreferences();
+  const resumes = useResumes();
+  const appearance = useAppearance((s) => s.preference);
+  const setAppearance = useAppearance((s) => s.setPreference);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [password, setPassword] = useState('');
   const deleteAccount = useDeleteAccount();
-  const resumes = useResumes();
   const deleteResume = useDeleteResume();
   const clearHistory = useClearHistory();
   const [confirmCv, setConfirmCv] = useState(false);
@@ -39,96 +50,119 @@ export default function ProfileScreen() {
 
   const p = profile.data;
   const pr = prefs.data;
+  const strength = profileStrength(p, pr, cv !== undefined);
   const education = p?.educationLevel ? `${educationLabel[p.educationLevel]}${p.educationStatus === 'inProgress' ? ' (en curso)' : p.educationStatus === 'completed' ? ' (terminado)' : ''}` : null;
+  const uploadCv = () => router.push({ pathname: '/onboarding', params: { mode: 'cv' } });
+
+  const profileSummary = p
+    ? [p.experienceMonths > 0 ? `${formatDuration(p.experienceMonths)} de experiencia` : null, education].filter(Boolean).join(' · ') || 'Completa tu experiencia y estudios'
+    : '';
+  const prefsSummary = pr
+    ? [
+        pr.minSalary != null ? `Desde ${formatMoney(pr.minSalary)}` : null,
+        pr.homeDistrict ? `Vivo en ${pr.homeDistrict}` : null,
+        pr.preferredModalities.length > 0 ? pr.preferredModalities.map((m) => modalityLabel[m]).join(', ') : null,
+      ].filter(Boolean).join(' · ') || 'Sueldo, distrito, horario y más'
+    : '';
 
   return (
-    <Screen onRefresh={() => { void profile.refetch(); void prefs.refetch(); }} refreshing={profile.isRefetching}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-        <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors.accentTint, alignItems: 'center', justifyContent: 'center' }}>
-          <Text variant="title" style={{ color: colors.warning }}>{firstName(user?.fullName).charAt(0).toUpperCase()}</Text>
+    <Screen onRefresh={() => { void profile.refetch(); void prefs.refetch(); void resumes.refetch(); }} refreshing={profile.isRefetching}>
+      <Card style={{ gap: 16 }} testID="profile-header">
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <Avatar name={user?.fullName ?? '?'} size={64} shape="circle" />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text variant="title" numberOfLines={1} testID="profile-name">{user?.fullName}</Text>
+            <Text variant="caption" tone="muted" numberOfLines={1}>{user?.email}</Text>
+            <View style={{ marginTop: 4 }}><Badge label="Plan Gratis" tone="brand" icon="sparkles" size="sm" /></View>
+          </View>
         </View>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text variant="title" numberOfLines={1} testID="profile-name">{user?.fullName}</Text>
-          <Text variant="caption" tone="muted" numberOfLines={1}>{user?.email}</Text>
-          <View style={{ marginTop: 4 }}><Badge label="Plan Gratis" tone="brand" icon="sparkles" size="sm" /></View>
-        </View>
-      </View>
-
-      <Card style={{ gap: 12 }} testID="cv-card">
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Icon name="document-text-outline" size={20} tone="primary" />
-          <Text variant="heading">Tu CV</Text>
-        </View>
-        {resumes.isLoading ? (
-          <Skeleton width="60%" />
-        ) : cv ? (
-          <>
-            <View style={{ gap: 2 }}>
-              <Text variant="bodyStrong" numberOfLines={1} testID="cv-name">{cv.originalFilename}</Text>
-              <Text variant="caption" tone="muted">Subido {formatRelativeTime(cv.createdAt)} · {(cv.sizeBytes / 1024).toFixed(0)} KB</Text>
+        {p && pr ? (
+          <View style={{ gap: 8 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text variant="caption" tone="muted">Qué tanto te conoce tu agente</Text>
+              <Text variant="caption" style={{ fontFamily: fontFamily.bold }}>{strength.percent}%</Text>
             </View>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Button label="Reemplazar" size="sm" variant="secondary" icon="refresh" onPress={() => router.push({ pathname: '/onboarding', params: { mode: 'cv' } })} testID="cv-replace" />
-              <Button label="Eliminar" size="sm" variant="danger" icon="trash-outline" onPress={() => setConfirmCv(true)} testID="cv-delete" />
-            </View>
-          </>
+            <ProgressBar value={strength.value} color={strength.value >= 1 ? colors.success : colors.primary} />
+            {strength.next ? (
+              <Button label={strength.next.label} icon="add-circle-outline" variant="tonal" size="sm" onPress={() => (strength.next?.key === 'cv' ? uploadCv() : router.push(strength.next?.route ?? '/edit-profile'))} testID="strength-next" />
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Icon name="checkmark-circle" size={16} tone="success" />
+                <Text variant="caption" tone="success">Perfil completo: tu agente tiene todo para encontrarte lo mejor.</Text>
+              </View>
+            )}
+          </View>
         ) : (
-          <>
-            <Text tone="muted">Sube tu CV una sola vez y completamos tu perfil por ti. Tú revisas todo antes de guardarlo.</Text>
-            <Button label="Subir mi CV" icon="cloud-upload-outline" onPress={() => router.push({ pathname: '/onboarding', params: { mode: 'cv' } })} testID="cv-upload" />
-          </>
+          <Skeleton height={8} />
         )}
       </Card>
 
-      {profile.isError ? (
-        <ErrorState message={profile.error.message} onRetry={() => void profile.refetch()} />
-      ) : (
-        <Card style={{ gap: 14 }} testID="profile-card">
-          <Header title="Mi perfil" action="Editar" onAction={() => router.push('/edit-profile')} />
-          {profile.isLoading || !p ? (
-            <View style={{ gap: 10 }}><Skeleton width="80%" /><Skeleton width="60%" /><Skeleton width="70%" /></View>
-          ) : (
-            <>
-              {p.headline ? <Text>{p.headline}</Text> : <Text tone="subtle">Aún sin titular profesional.</Text>}
-              <Fact icon="briefcase-outline" text={p.experienceMonths > 0 ? `${formatDuration(p.experienceMonths)} de experiencia` : 'Experiencia sin completar'} />
-              <Fact icon="school-outline" text={education ?? 'Estudios sin completar'} />
-              {p.skills.length > 0 ? (
-                <View style={{ gap: 8 }}>
-                  <Text variant="label" tone="subtle">Habilidades</Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                    {p.skills.map((s) => <Badge key={s.key} label={`${s.name} · ${skillLevelLabel[s.level].toLowerCase()}`} tone="neutral" />)}
-                  </View>
-                </View>
-              ) : (
-                <Button label="Agregar mis habilidades" icon="add" variant="secondary" size="sm" onPress={() => router.push('/edit-profile')} />
-              )}
-            </>
-          )}
+      {profile.isError ? <ErrorState message={profile.error.message} onRetry={() => void profile.refetch()} /> : null}
+
+      <ListGroup title="Tu información">
+        <ListRow icon="person-outline" title="Mi perfil" subtitle={profile.isLoading ? 'Cargando…' : (p?.headline ?? profileSummary)} onPress={() => router.push('/edit-profile')} testID="profile-card" />
+        <ListRow icon="options-outline" title="Lo que busco" subtitle={prefs.isLoading ? 'Cargando…' : prefsSummary} onPress={() => router.push('/edit-preferences')} testID="preferences-card" />
+        <ListRow
+          icon="document-text-outline"
+          title={cv ? 'Mi CV' : 'Subir mi CV'}
+          subtitle={resumes.isLoading ? 'Cargando…' : cv ? `${cv.originalFilename} · subido ${formatRelativeTime(cv.createdAt)}` : 'Completamos tu perfil por ti. Tú revisas todo.'}
+          onPress={uploadCv}
+          testID={cv ? 'cv-card' : 'cv-upload'}
+        />
+      </ListGroup>
+
+      {p && p.skills.length > 0 ? (
+        <Card style={{ gap: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text variant="heading">Habilidades</Text>
+            <Button label="Editar" variant="ghost" size="sm" icon="create-outline" onPress={() => router.push('/edit-profile')} />
+          </View>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {p.skills.slice(0, SKILLS_PREVIEW).map((s) => (
+              <Badge key={s.key || s.name} label={`${s.name} · ${skillLevelLabel[s.level].toLowerCase()}`} tone={s.level === 'advanced' ? 'brand' : 'neutral'} />
+            ))}
+            {p.skills.length > SKILLS_PREVIEW ? <Badge label={`+${p.skills.length - SKILLS_PREVIEW} más`} tone="neutral" /> : null}
+          </View>
         </Card>
-      )}
+      ) : null}
 
-      <Card style={{ gap: 12 }} testID="preferences-card">
-        <Header title="Lo que busco" action="Editar" onAction={() => router.push('/edit-preferences')} />
-        {prefs.isLoading || !pr ? (
-          <View style={{ gap: 10 }}><Skeleton width="70%" /><Skeleton width="55%" /></View>
-        ) : (
-          <>
-            <Fact icon="cash-outline" text={pr.minSalary != null ? `Sueldo mínimo ${formatMoney(pr.minSalary)}` : 'Sin sueldo mínimo'} />
-            <Fact icon="location-outline" text={pr.homeDistrict ? `Vivo en ${pr.homeDistrict}${pr.maxCommuteMinutes ? ` · viaje máx. ${pr.maxCommuteMinutes} min` : ''}` : 'Distrito sin indicar'} />
-            <Fact icon="business-outline" text={pr.preferredModalities.length > 0 ? pr.preferredModalities.map((m) => modalityLabel[m]).join(', ') : 'Cualquier modalidad'} />
-            <Fact icon="notifications-outline" text={`Avisos: ${frequencyLabel[pr.notificationFrequency].toLowerCase()}`} />
-          </>
-        )}
-      </Card>
+      {cv ? (
+        <ListGroup title="Tu CV">
+          <ListRow icon="refresh" title="Reemplazar CV" subtitle="Subir una versión más reciente" onPress={uploadCv} testID="cv-replace" />
+          <ListRow icon="trash-outline" title="Eliminar CV" subtitle="Borramos el archivo y el texto extraído" tone="danger" onPress={() => setConfirmCv(true)} testID="cv-delete" />
+        </ListGroup>
+      ) : null}
 
-      <View style={{ gap: 10 }}>
-        <Button label="Cerrar sesión" variant="secondary" icon="log-out-outline" onPress={() => setConfirmLogout(true)} fullWidth testID="logout" />
-        <Button label="Borrar mi historial de búsqueda" variant="ghost" onPress={() => setConfirmHistory(true)} fullWidth testID="clear-history" />
-        <Button label="Eliminar mi cuenta y mis datos" variant="ghost" onPress={() => { setPassword(''); setDeleteOpen(true); }} fullWidth testID="delete-account" />
+      <View style={{ gap: 8 }}>
+        <Text variant="label" tone="subtle" style={{ paddingHorizontal: 4 }}>Apariencia</Text>
+        <SegmentedTabs<AppearancePreference>
+          value={appearance}
+          onChange={setAppearance}
+          options={[
+            { value: 'system', label: 'Automático' },
+            { value: 'light', label: 'Claro' },
+            { value: 'dark', label: 'Oscuro' },
+          ]}
+        />
       </View>
+
+      {pr ? (
+        <ListGroup title="Avisos">
+          <ListRow icon="notifications-outline" title="Frecuencia de avisos" subtitle={`${frequencyLabel[pr.notificationFrequency]}${pr.pushEnabled ? ' · en el celular' : ''}`} onPress={() => router.push('/edit-preferences')} />
+        </ListGroup>
+      ) : null}
+
+      <ListGroup title="Cuenta">
+        <ListRow icon="log-out-outline" title="Cerrar sesión" onPress={() => setConfirmLogout(true)} testID="logout" />
+        <ListRow icon="time-outline" title="Borrar mi historial" subtitle="Guardadas, descartadas y postulaciones" onPress={() => setConfirmHistory(true)} testID="clear-history" />
+        <ListRow icon="warning-outline" title="Eliminar mi cuenta y mis datos" tone="danger" onPress={() => { setPassword(''); setDeleteOpen(true); }} testID="delete-account" />
+      </ListGroup>
+
+      <Text variant="caption" tone="subtle" style={{ textAlign: 'center', paddingVertical: 8 }}>ChambaIA · Hecho en Perú 🇵🇪</Text>
 
       <ConfirmDialog
         visible={confirmLogout}
+        icon="log-out-outline"
         title="¿Cerrar sesión?"
         message="Tu agente seguirá buscando; solo saldrás de este dispositivo."
         confirmLabel="Cerrar sesión"
@@ -145,7 +179,7 @@ export default function ProfileScreen() {
         onCancel={() => setConfirmCv(false)}
         onConfirm={() => {
           setConfirmCv(false);
-          if (cv) deleteResume.mutate(cv.id, { onSuccess: () => haptics.warning() });
+          if (cv) deleteResume.mutate(cv.id, { onSuccess: () => { haptics.warning(); toast.show({ message: 'Eliminamos tu CV' }); } });
         }}
       />
 
@@ -158,34 +192,16 @@ export default function ProfileScreen() {
         onCancel={() => setConfirmHistory(false)}
         onConfirm={() => {
           setConfirmHistory(false);
-          clearHistory.mutate(undefined, { onSuccess: () => haptics.warning() });
+          clearHistory.mutate(undefined, { onSuccess: () => { haptics.warning(); toast.show({ message: 'Borramos tu historial' }); } });
         }}
       />
 
       <BottomSheet visible={deleteOpen} onClose={() => setDeleteOpen(false)} title="Eliminar mi cuenta">
         <Text tone="muted">Borraremos para siempre tu perfil, preferencias, postulaciones y todo lo que tu agente aprendió de ti. No se puede deshacer.</Text>
         <Input label="Confirma con tu contraseña" value={password} onChangeText={setPassword} secureTextEntry icon="lock-closed-outline" autoComplete="current-password" />
-        {deleteAccount.error ? <Text tone="danger">{deleteAccount.error.message}</Text> : null}
+        {deleteAccount.error ? <InlineError message={deleteAccount.error.message} /> : null}
         <Button label="Eliminar definitivamente" variant="danger" loading={deleteAccount.isPending} disabled={password.length === 0} onPress={() => deleteAccount.mutate(password, { onError: () => haptics.error() })} fullWidth />
       </BottomSheet>
     </Screen>
-  );
-}
-
-function Header({ title, action, onAction }: { title: string; action: string; onAction: () => void }) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-      <Text variant="heading">{title}</Text>
-      <Button label={action} variant="ghost" size="sm" icon="create-outline" onPress={onAction} />
-    </View>
-  );
-}
-
-function Fact({ icon, text }: { icon: IconName; text: string }) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-      <Icon name={icon} size={18} tone="muted" />
-      <Text style={{ flex: 1 }}>{text}</Text>
-    </View>
   );
 }

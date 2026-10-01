@@ -1,6 +1,7 @@
 import { Modal, Pressable, View } from 'react-native';
 
 import { Button } from './Button';
+import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
 import { useTheme } from './theme';
 
@@ -11,12 +12,13 @@ type ConfirmDialogProps = {
   confirmLabel?: string;
   cancelLabel?: string;
   destructive?: boolean;
+  icon?: IconName;
   onConfirm: () => void;
   onCancel: () => void;
 };
 
 /** Centered modal for yes/no decisions. */
-export function ConfirmDialog({ visible, title, message, confirmLabel = 'Confirmar', cancelLabel = 'Cancelar', destructive, onConfirm, onCancel }: ConfirmDialogProps) {
+export function ConfirmDialog({ visible, title, message, confirmLabel = 'Confirmar', cancelLabel = 'Cancelar', destructive, icon, onConfirm, onCancel }: ConfirmDialogProps) {
   const { colors, radius, spacing, shadow } = useTheme();
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onCancel} statusBarTranslucent>
@@ -29,6 +31,9 @@ export function ConfirmDialog({ visible, title, message, confirmLabel = 'Confirm
           onPress={() => undefined}
           style={{ width: '100%', maxWidth: 380, backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.xl, gap: spacing.md, ...shadow.raised }}
         >
+          <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: destructive ? colors.dangerTint : colors.primaryTint, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name={icon ?? (destructive ? 'warning-outline' : 'help-circle-outline')} size={26} tone={destructive ? 'danger' : 'primary'} />
+          </View>
           <Text variant="title">{title}</Text>
           {message ? <Text tone="muted">{message}</Text> : null}
           <View style={{ gap: spacing.sm, marginTop: spacing.sm }}>
