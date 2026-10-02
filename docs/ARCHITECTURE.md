@@ -14,6 +14,7 @@ FUENTES → INGESTA → NORMALIZACIÓN → DEDUPLICACIÓN → FILTROS DETERMINÍ
 | Filtros duros + matching estructural (A y B) | 1 | ✅ `MatchEngine` |
 | Fuentes, normalización, dedup en 3 capas, retiro | 3 | ✅ `Domain/Ingestion` + `Infrastructure/Ingestion` + `IngestionJob` |
 | Embeddings locales (Ollama + bge-m3) + pgvector HNSW (C) | 4 | ✅ `Infrastructure/Embeddings` · ver [OLLAMA.md](OLLAMA.md) |
+| Explicación por ejes, mejoras what-if y ofertas parecidas | 5 | ✅ `Domain/Matching/MatchExplainer` · `GET /jobs/{id}/similar` |
 | Push / workers | 6 | pendiente (Worker + Quartz ya corren la ingesta) |
 | Proveedores de IA + router + límites | 8 | pendiente (tabla `AiUsage` lista) |
 

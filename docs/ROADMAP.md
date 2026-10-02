@@ -36,8 +36,12 @@ Leyenda: [x] hecho · [ ] pendiente
 - [x] Modo sin embeddings idéntico al anterior; calibración medida con bge-m3 real (`infra/scripts/calibrate-embeddings.mjs`)
 - [ ] Calibrar con ofertas reales etiquetadas; métricas de latencia/errores del servidor de embeddings
 
-## Fase 5 — Feed y explicación
-- [ ] Refinar feed con ranking semántico; explicación enriquecida
+## Fase 5 — Feed y explicación ✅
+- [x] Explicación por ejes (cargo, habilidades, experiencia, condiciones, parecido con tu perfil): nivel + una frase, nunca porcentajes
+- [x] «Cómo mejorar esta compatibilidad»: simulaciones del propio motor («Agrega X → pasaría a Excelente»), solo para ofertas no filtradas y siempre con «solo si ya lo sabes hacer»
+- [x] Ofertas parecidas por vecinos más cercanos de pgvector (HNSW), con respaldo por empresa/sector sin embeddings; no sugiere lo ya descartado
+- [x] Orden del feed: recomendado (por tab), más recientes, mejor sueldo
+- [ ] Explicación con texto generado por IA (fase 8, opcional; hoy es determinista y gratis)
 
 ## Fase 6 — Alertas y workers
 - [ ] Expo Push, registro de dispositivos, resúmenes por frecuencia, recálculo incremental tras ingesta

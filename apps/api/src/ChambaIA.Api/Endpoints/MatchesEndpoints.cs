@@ -42,6 +42,15 @@ public static class MatchesEndpoints
 
             if (parsed.Category is { } category) rows = rows.Where(r => r.Match.Category == category);
 
+            // An explicit sort always wins over the tab's natural order.
+            if (parsed.Sort is { } sort)
+                rows = sort switch
+                {
+                    FeedSort.Recent => rows.OrderByDescending(r => r.Job.PostedAt).ThenByDescending(r => r.Match.OverallScore),
+                    FeedSort.Salary => rows.OrderByDescending(r => r.Job.SalaryMax ?? r.Job.SalaryMin).ThenByDescending(r => r.Match.OverallScore),
+                    _ => rows.OrderByDescending(r => r.Match.OverallScore).ThenByDescending(r => r.Job.PostedAt)
+                };
+
             var total = await rows.CountAsync(ct);
             var page_ = await rows.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
 
@@ -63,7 +72,9 @@ public static class MatchesEndpoints
             var match = await db.Matches.AsNoTracking()
                 .Include(m => m.Job)
                 .SingleOrDefaultAsync(m => m.JobId == jobId && db.CandidateProfiles.Any(p => p.Id == m.CandidateId && p.UserId == userId), ct);
-            return match?.Job is null ? Results.NotFound() : Results.Ok(new MatchDetailResponse(match.Job.ToSummary(), match.ToDetail()));
+            if (match?.Job is null) return Results.NotFound();
+            var explanation = await ExplanationBuilder.BuildAsync(db, userId, match.Job, match, ct);
+            return Results.Ok(new MatchDetailResponse(match.Job.ToSummary(), match.ToDetail(explanation)));
         });
 
         group.MapPost("/refresh", async (HttpContext http, MatchRecomputeService matcher, CancellationToken ct) =>

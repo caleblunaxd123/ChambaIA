@@ -25,11 +25,13 @@ public static class Mappers
         m.Reasons.Take(3).Select(n => n.Title).ToList(),
         m.Warnings.Take(2).Select(n => n.Title).ToList());
 
-    public static MatchDetailDto ToDetail(this CandidateJobMatch m) => new(
+    public static MatchDetailDto ToDetail(this CandidateJobMatch m, MatchExplanation? explanation = null) => new(
         m.Category, MatchFormatting.Category(m.Category), MatchFormatting.Recommendation(m.Category), m.Status,
         m.MatchedSkills, m.MissingSkills,
         m.Reasons.Select(n => new MatchNoteDto(n.Code, n.Title, n.Detail)).ToList(),
-        m.Warnings.Select(n => new MatchNoteDto(n.Code, n.Title, n.Detail)).ToList());
+        m.Warnings.Select(n => new MatchNoteDto(n.Code, n.Title, n.Detail)).ToList(),
+        explanation?.Dimensions.Select(d => new DimensionDto(d.Key, d.Label, (DimensionLevelDto)(int)d.Level, d.Note)).ToList() ?? [],
+        explanation?.Improvements.Select(i => new ImprovementDto(i.Title, i.Detail, i.ResultCategory, MatchFormatting.Category(i.ResultCategory))).ToList() ?? []);
 
     public static ApplicationDto ToDto(this JobApplication a) => new(
         a.Id, a.JobId, a.Status, a.AppliedAt, a.Notes, a.InterviewDate, a.SalaryOffered,

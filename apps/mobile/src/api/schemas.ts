@@ -139,6 +139,12 @@ export const matchDetailSchema = z.object({
   missingSkills: z.array(z.string()),
   reasons: z.array(matchNoteSchema),
   warnings: z.array(matchNoteSchema),
+  /** Per-axis explanation (role, skills, experience, conditions, meaning): qualitative levels, never percentages. */
+  dimensions: z.array(
+    z.object({ key: z.string(), label: z.string(), level: z.enum(['weak', 'medium', 'strong']), note: z.string() }),
+  ),
+  /** What-if suggestions computed by the matching engine. */
+  improvements: z.array(z.object({ title: z.string(), detail: z.string(), resultCategory: matchCategory, resultLabel: z.string() })),
 });
 export type MatchDetail = z.infer<typeof matchDetailSchema>;
 

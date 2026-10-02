@@ -106,7 +106,7 @@ docker compose --profile full up -d --build
 
 ```bash
 dotnet build ChambaIA.sln            # 0 errores, 0 advertencias (TreatWarningsAsErrors)
-dotnet test ChambaIA.sln             # 224 pruebas (dominio + integración); las de integración levantan PostgreSQL con Testcontainers (requiere Docker)
+dotnet test ChambaIA.sln             # 243 pruebas (dominio + integración); las de integración levantan PostgreSQL con Testcontainers (requiere Docker)
 cd apps/mobile
 npm run typecheck && npm run lint && npm test
 ```
@@ -128,6 +128,14 @@ npm run typecheck && npm run lint && npm test
 - **Onboarding** de 5 pasos (sobre ti → CV → procesando → revisión editable → preferencias → «tu agente está listo»), con guard de rutas: un usuario sin onboarding solo puede ver el flujo. Alternativa «Prefiero llenarlo a mano».
 - **Perfil**: CV actual (reemplazar / eliminar), borrar historial y eliminar cuenta (borra también los archivos de CV).
 - Plan FREE/PRO: 1 CV (subir otro reemplaza y borra el anterior del disco); PRO+: hasta 5.
+
+## Qué incluye la Fase 5 (feed y explicación)
+
+- **¿Por qué encaja conmigo?** por ejes —cargo, habilidades, experiencia, condiciones y parecido con tu perfil— con un nivel (Alto/Medio/Bajo) y una frase; nunca porcentajes.
+- **Cómo mejorar esta compatibilidad**: el propio motor simula «¿y si tuvieras X?» y te dice a qué categoría pasaría. Siempre con la advertencia *«solo si ya lo sabes hacer»*; no aparece en ofertas que chocan con lo que pediste evitar.
+- **Ofertas parecidas** (`GET /api/v1/jobs/{id}/similar`): vecinos más cercanos por significado con pgvector; sin embeddings, misma empresa o sector.
+- **Orden del feed** (`sort=relevance|recent|salary`) desde el selector de filtros.
+- Todo determinista y sin costo: la explicación reutiliza el puntaje semántico ya guardado, no llama a Ollama ni a ningún modelo.
 
 ## Qué incluye la Fase 4 (embeddings)
 
@@ -168,7 +176,7 @@ Lo que **todavía no** existe (ver roadmap): conectores a portales reales (fase 
 
 ## CI
 
-`.github/workflows/ci.yml`: en cada PR y en `main` compila (.NET, advertencias = errores), corre las 224 pruebas (con
+`.github/workflows/ci.yml`: en cada PR y en `main` compila (.NET, advertencias = errores), corre las 243 pruebas (con
 PostgreSQL real vía Testcontainers) y, para la app, `typecheck`, `lint` y `jest`.
 
 ## Datos demo

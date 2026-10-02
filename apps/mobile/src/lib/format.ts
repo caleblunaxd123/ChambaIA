@@ -55,6 +55,10 @@ export const educationLabel: Record<EducationLevel, string> = {
 
 export const skillLevelLabel: Record<SkillLevel, string> = { basic: 'Básico', intermediate: 'Intermedio', advanced: 'Avanzado' };
 
+export const dimensionLevelLabel = { strong: 'Alto', medium: 'Medio', weak: 'Bajo' } as const;
+
+export const sortLabel = { relevance: 'Relevancia', recent: 'Más recientes', salary: 'Mejor sueldo' } as const;
+
 export const frequencyLabel: Record<NotificationFrequency, string> = {
   instant: 'Al instante',
   every2Hours: 'Cada 2 horas',

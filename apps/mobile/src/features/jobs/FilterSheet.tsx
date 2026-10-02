@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { useDistricts } from '@/api/queries';
 import type { FeedFilters } from '@/api/endpoints';
 import type { MatchCategory, WorkModality } from '@/api/schemas';
-import { modalityLabel } from '@/lib/format';
+import { modalityLabel, sortLabel } from '@/lib/format';
 import { BottomSheet } from '@/ui/BottomSheet';
 import { Button } from '@/ui/Button';
 import { Chip } from '@/ui/Chip';
@@ -28,6 +28,8 @@ const DATE_OPTIONS = [
   { value: 7, label: 'Última semana' },
   { value: 30, label: 'Último mes' },
 ];
+
+const SORTS = ['recent', 'salary'] as const;
 
 const MODALITIES: WorkModality[] = ['onSite', 'hybrid', 'remote'];
 
@@ -59,6 +61,16 @@ export function FilterSheet({ visible, value, onClose, onApply }: FilterSheetPro
         </View>
       }
     >
+      <View style={{ gap: 8 }}>
+        <Text variant="caption" tone="muted">Ordenar por</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          <Chip label="Recomendado" icon="sparkles-outline" selected={draft.sort === undefined} onPress={() => set('sort', null)} testID="sort-default" />
+          {SORTS.map((s) => (
+            <Chip key={s} label={sortLabel[s]} selected={draft.sort === s} onPress={() => set('sort', draft.sort === s ? null : s)} testID={`sort-${s}`} />
+          ))}
+        </View>
+      </View>
+
       <View style={{ gap: 8 }}>
         <Text variant="caption" tone="muted">Compatibilidad</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -95,5 +107,5 @@ export function FilterSheet({ visible, value, onClose, onApply }: FilterSheetPro
 
 /** Number of active filters (the search text is not counted: it has its own box). */
 export function countFilters(f: FeedFilters): number {
-  return [f.district, f.modality, f.minSalary, f.postedWithinDays, f.category].filter((x) => x !== undefined).length;
+  return [f.district, f.modality, f.minSalary, f.postedWithinDays, f.category, f.sort].filter((x) => x !== undefined).length;
 }

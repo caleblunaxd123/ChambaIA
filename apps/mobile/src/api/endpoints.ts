@@ -13,6 +13,7 @@ import {
   resumeSchema,
   applicationSchema,
   authResponseSchema,
+  feedItemSchema,
   feedPageSchema,
   jobDetailResponseSchema,
   matchSummarySchema,
@@ -30,7 +31,11 @@ export type FeedFilters = {
   minSalary?: number;
   postedWithinDays?: number;
   category?: MatchCategory;
+  /** Undefined = the tab's natural order (relevance for "Para ti", newest for "Nuevas"). */
+  sort?: FeedSort;
 };
+
+export type FeedSort = 'relevance' | 'recent' | 'salary';
 
 export function buildQuery(params: Record<string, string | number | undefined | null>): string {
   const search = new URLSearchParams();
@@ -85,6 +90,7 @@ export const api = {
 
   jobs: {
     detail: (id: string) => request(`/jobs/${id}`, { schema: jobDetailResponseSchema }),
+    similar: (id: string, limit = 4) => request(`/jobs/${id}/similar?limit=${limit}`, { schema: z.array(feedItemSchema) }),
   },
 
   applications: {

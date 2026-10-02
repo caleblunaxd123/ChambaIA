@@ -50,6 +50,11 @@ export function useSources() {
   return useQuery({ queryKey: ['sources'], queryFn: api.sources.list, staleTime: 5 * 60_000 });
 }
 
+/** Offers that mean the same thing as this one. Cheap to cache: it only changes when the catalogue does. */
+export function useSimilarJobs(id: string) {
+  return useQuery({ queryKey: ['job', id, 'similar'], queryFn: () => api.jobs.similar(id), staleTime: 5 * 60_000 });
+}
+
 export function useApplications() {
   return useQuery({ queryKey: keys.applications, queryFn: api.applications.list });
 }

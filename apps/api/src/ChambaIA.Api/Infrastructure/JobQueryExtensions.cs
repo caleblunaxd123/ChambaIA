@@ -13,6 +13,7 @@ public sealed record ParsedFilter(
     EmploymentType? EmploymentType,
     MatchTab Tab,
     MatchCategory? Category,
+    FeedSort? Sort,
     int Page,
     int PageSize);
 
@@ -47,7 +48,9 @@ public static class JobQueryExtensions
             if (!TryParseEnum(m.Category, out category)) errors["category"] = ["Valor inválido."];
         }
 
-        parsed = new ParsedFilter(f, modality, type, tab ?? MatchTab.ForYou, category,
+        if (!TryParseEnum<FeedSort>(f.Sort, out var sort)) errors["sort"] = ["Valor inválido (relevance, recent, salary)."];
+
+        parsed = new ParsedFilter(f, modality, type, tab ?? MatchTab.ForYou, category, sort,
             Math.Max(1, f.Page ?? 1), Math.Clamp(f.PageSize ?? 20, 1, MaxPageSize));
         error = errors.Count > 0 ? Results.ValidationProblem(errors) : null;
         return errors.Count == 0;

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { JobDetailResponse, MatchNote } from '@/api/schemas';
 import { useCreateApplication, useJobDetail, useSeenMutation } from '@/api/queries';
+import { FitBreakdown, ImprovementsCard, SimilarJobs } from '@/features/jobs/Explanation';
 import { categoryStyle } from '@/features/jobs/MatchBadge';
 import { SkillBadge } from '@/features/jobs/SkillBadge';
 import { useJobActions } from '@/features/jobs/useJobActions';
@@ -19,11 +20,10 @@ import { Card } from '@/ui/Card';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
 import { ErrorState } from '@/ui/EmptyState';
 import { Icon, type IconName } from '@/ui/Icon';
-import { ProgressBar } from '@/ui/ProgressBar';
 import { SCREEN_MAX_WIDTH } from '@/ui/Screen';
 import { Skeleton } from '@/ui/Skeleton';
 import { Text } from '@/ui/Text';
-import { fontFamily, useTheme } from '@/ui/theme';
+import { useTheme } from '@/ui/theme';
 
 export default function JobDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -89,7 +89,7 @@ export default function JobDetailScreen() {
       ) : (
         <>
           <ScrollView contentContainerStyle={{ width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center', padding: spacing.lg, paddingBottom: 120 + insets.bottom, gap: spacing.lg }} showsVerticalScrollIndicator={false}>
-            <DetailBody data={data} onOpenTracker={() => router.navigate('/applications')} />
+            <DetailBody data={data} onOpenTracker={() => router.navigate('/applications')} onEditProfile={() => router.push('/edit-profile')} />
 
             {data.match && !alreadyApplied && data.match.status !== 'dismissed' ? (
               <Card tone="muted" style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -156,7 +156,7 @@ export default function JobDetailScreen() {
   );
 }
 
-function DetailBody({ data, onOpenTracker }: { data: JobDetailResponse; onOpenTracker: () => void }) {
+function DetailBody({ data, onOpenTracker, onEditProfile }: { data: JobDetailResponse; onOpenTracker: () => void; onEditProfile: () => void }) {
   const { job, match, application } = data;
   const s = job.summary;
   const salary = formatSalary(s);
@@ -189,12 +189,14 @@ function DetailBody({ data, onOpenTracker }: { data: JobDetailResponse; onOpenTr
       </View>
 
       {match ? (
-        <WhyCard match={match} requiredCount={job.skillsRequired.length} />
+        <WhyCard match={match} />
       ) : (
         <Card tone="muted">
           <Text tone="muted">Aún no analizamos esta oferta contra tu perfil. Completa tu perfil para ver qué tan bien encaja.</Text>
         </Card>
       )}
+
+      {match ? <ImprovementsCard improvements={match.improvements} onEditProfile={onEditProfile} /> : null}
 
       <Card style={{ gap: 12 }}>
         <Text variant="heading">Lo que piden</Text>
@@ -218,6 +220,8 @@ function DetailBody({ data, onOpenTracker }: { data: JobDetailResponse; onOpenTr
       </Card>
 
       <Description text={job.description} />
+
+      <SimilarJobs jobId={s.id} />
     </>
   );
 }
@@ -235,11 +239,10 @@ function Fact({ icon, label, value, highlight }: { icon: IconName; label: string
   );
 }
 
-function WhyCard({ match, requiredCount }: { match: NonNullable<JobDetailResponse['match']>; requiredCount: number }) {
+function WhyCard({ match }: { match: NonNullable<JobDetailResponse['match']> }) {
   const { colors, radius } = useTheme();
   const style = categoryStyle[match.category];
   const { bg, fg } = useBadgeColors(style.tone);
-  const have = Math.max(0, requiredCount - match.missingSkills.length);
 
   return (
     <Card padded={false} style={{ overflow: 'hidden' }} testID="why-card">
@@ -254,15 +257,7 @@ function WhyCard({ match, requiredCount }: { match: NonNullable<JobDetailRespons
       </View>
 
       <View style={{ padding: 16, gap: 16 }}>
-        {requiredCount > 0 ? (
-          <View style={{ gap: 8 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text variant="caption" tone="muted">Habilidades que piden</Text>
-              <Text variant="caption" style={{ fontFamily: fontFamily.bold }}>Tienes {have} de {requiredCount}</Text>
-            </View>
-            <ProgressBar value={have / requiredCount} color={have === requiredCount ? colors.success : colors.primary} />
-          </View>
-        ) : null}
+        <FitBreakdown dimensions={match.dimensions} />
 
         {match.reasons.length > 0 ? (
           <View style={{ gap: 10 }}>

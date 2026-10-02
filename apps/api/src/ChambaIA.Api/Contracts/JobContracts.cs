@@ -53,7 +53,17 @@ public sealed record MatchDetailDto(
     IReadOnlyList<string> MatchedSkills,
     IReadOnlyList<string> MissingSkills,
     IReadOnlyList<MatchNoteDto> Reasons,
-    IReadOnlyList<MatchNoteDto> Warnings);
+    IReadOnlyList<MatchNoteDto> Warnings,
+    IReadOnlyList<DimensionDto> Dimensions,
+    IReadOnlyList<ImprovementDto> Improvements);
+
+/// <summary>One axis of the explanation: a qualitative level (weak/medium/strong) and one sentence. Never a percentage.</summary>
+public sealed record DimensionDto(string Key, string Label, DimensionLevelDto Level, string Note);
+
+public enum DimensionLevelDto { Weak, Medium, Strong }
+
+/// <summary>A "what would change" suggestion computed by re-running the matching engine.</summary>
+public sealed record ImprovementDto(string Title, string Detail, MatchCategory ResultCategory, string ResultLabel);
 
 public sealed record FeedItemDto(JobSummaryDto Job, MatchSummaryDto? Match);
 
@@ -79,6 +89,8 @@ public sealed record MatchOverviewDto(
 
 public enum MatchTab { ForYou, New, Saved }
 
+public enum FeedSort { Relevance, Recent, Salary }
+
 public class JobFilterQuery
 {
     public string? Q { get; init; }
@@ -88,6 +100,8 @@ public class JobFilterQuery
     public string? Industry { get; init; }
     public decimal? MinSalary { get; init; }
     public int? PostedWithinDays { get; init; }
+    /// <summary>relevance | recent | salary. Default depends on the tab (relevance for "Para ti", recent for "Nuevas").</summary>
+    public string? Sort { get; init; }
     public int? Page { get; init; }
     public int? PageSize { get; init; }
 }
