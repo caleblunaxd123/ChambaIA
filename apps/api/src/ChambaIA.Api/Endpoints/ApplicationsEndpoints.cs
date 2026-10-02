@@ -57,6 +57,7 @@ public static class ApplicationsEndpoints
 
                 if (request.Notes is not null) application.Notes = request.Notes.Trim();
                 if (request.InterviewDate is not null) application.InterviewDate = request.InterviewDate;
+                if (request.ClearInterviewDate == true) application.InterviewDate = null;
                 if (request.SalaryOffered is not null) application.SalaryOffered = request.SalaryOffered;
 
                 await tracker.ApplyStatusAsync(application, request.Status ?? application.Status, ct);

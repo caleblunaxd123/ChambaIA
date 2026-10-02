@@ -18,6 +18,8 @@ export function combineDayTime(day: Date, time: string): Date {
 type Props = {
   value: Date | null;
   onChange: (value: Date) => void;
+  /** Removes the date (the card stays in "Entrevista"). */
+  onClear?: () => void;
   now?: Date;
 };
 
@@ -25,7 +27,7 @@ type Props = {
  * Dependency-free date/time picker for interviews: the next three weeks as chips plus the usual office-hour slots.
  * Covers almost every real case without a native picker module (works in Expo Go and on web).
  */
-export function InterviewPicker({ value, onChange, now = new Date() }: Props) {
+export function InterviewPicker({ value, onChange, onClear, now = new Date() }: Props) {
   const today = startOfDay(now);
   const days = Array.from({ length: DAYS_AHEAD }, (_, i) => new Date(today.getFullYear(), today.getMonth(), today.getDate() + i));
   // A date already saved in the past (or further away) stays selectable so editing never loses it.
@@ -56,6 +58,11 @@ export function InterviewPicker({ value, onChange, now = new Date() }: Props) {
               <Chip key={t} label={t} selected={selectedTime === t} onPress={() => onChange(combineDayTime(value, t))} />
             ))}
           </View>
+          {onClear ? (
+            <View style={{ flexDirection: 'row' }}>
+              <Chip label="Quitar fecha" icon="close" onPress={onClear} testID="interview-clear" />
+            </View>
+          ) : null}
         </>
       ) : null}
     </View>

@@ -13,6 +13,7 @@ internal sealed class JobSourceConfiguration : IEntityTypeConfiguration<JobSourc
         b.Property(s => s.Key).HasMaxLength(50);
         b.Property(s => s.Name).HasMaxLength(100);
         b.Property(s => s.BaseUrl).HasMaxLength(300);
+        b.Property(s => s.LastError).HasMaxLength(500);
     }
 }
 
@@ -22,6 +23,7 @@ internal sealed class JobOfferConfiguration : IEntityTypeConfiguration<JobOffer>
     {
         b.HasKey(j => j.Id);
         b.HasOne(j => j.Source).WithMany().HasForeignKey(j => j.SourceId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<JobOffer>().WithMany().HasForeignKey(j => j.DuplicateOfId).OnDelete(DeleteBehavior.SetNull);
 
         b.Property(j => j.ExternalId).HasMaxLength(200);
         b.Property(j => j.SourceName).HasMaxLength(100);
@@ -49,6 +51,7 @@ internal sealed class JobOfferConfiguration : IEntityTypeConfiguration<JobOffer>
         b.HasIndex(j => j.District);
         b.HasIndex(j => j.ContentHash);
         b.HasIndex(j => new { j.NormalizedCompany, j.NormalizedTitle });
+        b.HasIndex(j => j.DuplicateOfId);
         // Vector (HNSW) index is created in phase 4, once embeddings are actually populated.
     }
 }

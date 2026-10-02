@@ -1,0 +1,26 @@
+{
+  "jobs": [
+    {
+      "id": "ADM-2026-114",
+      "title": "Asistente Administrativo(a)",
+      "company": "Clínica Ejemplo del Norte",
+      "description": "<p>Funciones: atención al paciente en admisión, gestión documentaria y reportes.</p><p>Requisitos: estudios técnicos en administración, 1 año de experiencia, Excel intermedio.</p><p>Deseable: manejo de SAP.</p><p>Horario: lunes a viernes de 8:00 a 17:00.</p>",
+      "url": "https://empleos.clinica-ejemplo.pe/ofertas/ADM-2026-114",
+      "location": "Los Olivos, Lima",
+      "salary": "S/ 1,900 - 2,100",
+      "postedAt": "2026-10-01T09:00:00-05:00"
+    },
+    {
+      "id": "FAC-2026-020",
+      "title": "Analista de Facturación - Remoto",
+      "company": "Clínica Ejemplo del Norte",
+      "description": "Emisión y control de facturas electrónicas. 2 años de experiencia. Trabajo 100% remoto.",
+      "url": "https://empleos.clinica-ejemplo.pe/ofertas/FAC-2026-020",
+      "location": "Remoto",
+      "salaryMin": 2500,
+      "salaryMax": 2900,
+      "skills": ["facturacion", "Excel"],
+      "niceToHave": ["SAP"]
+    }
+  ]
+}

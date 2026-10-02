@@ -9,6 +9,7 @@ import {
   type WorkModality,
   agentReplySchema,
   resumeDetailSchema,
+  sourceSchema,
   resumeSchema,
   applicationSchema,
   authResponseSchema,
@@ -90,9 +91,13 @@ export const api = {
     list: () => request('/applications', { schema: z.array(applicationSchema) }),
     create: (input: { jobId: string; status?: ApplicationStatus; notes?: string }) =>
       request('/applications', { method: 'POST', body: input, schema: applicationSchema }),
-    patch: (id: string, input: { status?: ApplicationStatus; notes?: string; interviewDate?: string; salaryOffered?: number }) =>
+    patch: (id: string, input: ApplicationPatch) =>
       request(`/applications/${id}`, { method: 'PATCH', body: input, schema: applicationSchema }),
     remove: (id: string) => request(`/applications/${id}`, { method: 'DELETE' }),
+  },
+
+  sources: {
+    list: () => request('/sources', { schema: z.array(sourceSchema) }),
   },
 
   catalog: {
@@ -103,6 +108,15 @@ export const api = {
   agent: {
     send: (text: string) => request('/agent/messages', { method: 'POST', body: { text }, schema: agentReplySchema }),
   },
+};
+
+export type ApplicationPatch = {
+  status?: ApplicationStatus;
+  notes?: string;
+  interviewDate?: string;
+  /** The API cannot tell "unchanged" from "remove" with null, so removing the date is explicit. */
+  clearInterviewDate?: boolean;
+  salaryOffered?: number;
 };
 
 /** What the profile PUT accepts (same shape as the response minus read-only fields). */

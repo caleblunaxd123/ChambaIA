@@ -52,6 +52,12 @@ public class JobOffer
     public DateTimeOffset LastSeenAt { get; set; } = DateTimeOffset.UtcNow;
     public bool IsActive { get; set; } = true;
 
+    /// <summary>
+    /// Set when ingestion recognised this offer as the same job published elsewhere. Duplicates are stored (so the
+    /// pipeline stays idempotent and we know where else it appeared) but never shown or matched.
+    /// </summary>
+    public Guid? DuplicateOfId { get; set; }
+
     public string ContentHash { get; set; } = "";
     public Vector? Embedding { get; set; }
 }

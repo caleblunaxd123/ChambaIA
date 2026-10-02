@@ -36,6 +36,9 @@ public sealed class PatchApplicationRequest
 
     public DateTimeOffset? InterviewDate { get; init; }
 
+    /// <summary>JSON null cannot tell "leave as is" from "remove", so removing the interview date is explicit.</summary>
+    public bool? ClearInterviewDate { get; init; }
+
     [Range(0, 1_000_000)]
     public decimal? SalaryOffered { get; init; }
 }

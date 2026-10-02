@@ -4,6 +4,7 @@ import { View } from 'react-native';
 
 import { useClearHistory, useDeleteResume, usePreferences, useProfile, useResumes } from '@/api/queries';
 import { logout, useDeleteAccount } from '@/features/auth/useAuthActions';
+import { SourcesSheet } from '@/features/profile/SourcesSheet';
 import { educationLabel, formatDuration, formatMoney, formatRelativeTime, frequencyLabel, modalityLabel, skillLevelLabel } from '@/lib/format';
 import { haptics } from '@/lib/haptics';
 import { profileStrength } from '@/lib/profile-strength';
@@ -46,6 +47,7 @@ export default function ProfileScreen() {
   const clearHistory = useClearHistory();
   const [confirmCv, setConfirmCv] = useState(false);
   const [confirmHistory, setConfirmHistory] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
   const cv = resumes.data?.[0];
 
   const p = profile.data;
@@ -152,6 +154,10 @@ export default function ProfileScreen() {
         </ListGroup>
       ) : null}
 
+      <ListGroup title="Sobre ChambaIA">
+        <ListRow icon="globe-outline" title="¿De dónde salen las ofertas?" subtitle="Fuentes, frescura y cómo evitamos duplicados" onPress={() => setSourcesOpen(true)} testID="sources-row" />
+      </ListGroup>
+
       <ListGroup title="Cuenta">
         <ListRow icon="log-out-outline" title="Cerrar sesión" onPress={() => setConfirmLogout(true)} testID="logout" />
         <ListRow icon="time-outline" title="Borrar mi historial" subtitle="Guardadas, descartadas y postulaciones" onPress={() => setConfirmHistory(true)} testID="clear-history" />
@@ -195,6 +201,8 @@ export default function ProfileScreen() {
           clearHistory.mutate(undefined, { onSuccess: () => { haptics.warning(); toast.show({ message: 'Borramos tu historial' }); } });
         }}
       />
+
+      <SourcesSheet visible={sourcesOpen} onClose={() => setSourcesOpen(false)} />
 
       <BottomSheet visible={deleteOpen} onClose={() => setDeleteOpen(false)} title="Eliminar mi cuenta">
         <Text tone="muted">Borraremos para siempre tu perfil, preferencias, postulaciones y todo lo que tu agente aprendió de ti. No se puede deshacer.</Text>

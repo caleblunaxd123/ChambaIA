@@ -12,5 +12,8 @@ public class JobSource
     public bool IsEnabled { get; set; } = true;
     public string? BaseUrl { get; set; }
     public string? Notes { get; set; }
+    /// <summary>Last successful fetch.</summary>
     public DateTimeOffset? LastFetchedAt { get; set; }
+    /// <summary>Why the last attempt failed (null after a success). Shown to operators, never to candidates.</summary>
+    public string? LastError { get; set; }
 }

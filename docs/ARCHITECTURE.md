@@ -12,9 +12,9 @@ FUENTES → INGESTA → NORMALIZACIÓN → DEDUPLICACIÓN → FILTROS DETERMINÍ
 | Normalización de texto, skills y distritos | 1 | ✅ `ChambaIA.Domain` |
 | Lectura de CV (PDF/DOCX) y parser determinista | 2 | ✅ `Domain/Resumes` + `Infrastructure/Resumes` |
 | Filtros duros + matching estructural (A y B) | 1 | ✅ `MatchEngine` |
-| Fuente de ingesta, dedup | 3 | pendiente |
+| Fuentes, normalización, dedup en 3 capas, retiro | 3 | ✅ `Domain/Ingestion` + `Infrastructure/Ingestion` + `IngestionJob` |
 | Embeddings + pgvector (C) | 4 | pendiente (columnas `vector(1024)` ya existen) |
-| Push / workers | 6 | pendiente (Worker + Quartz ya corren) |
+| Push / workers | 6 | pendiente (Worker + Quartz ya corren la ingesta) |
 | Proveedores de IA + router + límites | 8 | pendiente (tabla `AiUsage` lista) |
 
 ## Componentes

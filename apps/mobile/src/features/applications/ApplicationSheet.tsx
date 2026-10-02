@@ -17,7 +17,7 @@ import { APPLICATION_STAGES, stageStyle } from './stages';
 
 export { APPLICATION_STAGES } from './stages';
 
-export type ApplicationChanges = { status: ApplicationStatus; notes: string; interviewDate?: string };
+export type ApplicationChanges = { status: ApplicationStatus; notes: string; interviewDate?: string; clearInterviewDate?: boolean };
 
 type Props = {
   application: JobApplication | null;
@@ -58,7 +58,14 @@ export function ApplicationSheet({ application, saving, onClose, onSave, onRemov
             <View style={{ gap: 8 }}>
               <Button
                 label="Guardar cambios"
-                onPress={() => onSave(application.id, { status, notes, interviewDate: status === 'interview' && interview ? interview.toISOString() : undefined })}
+                onPress={() =>
+                  onSave(application.id, {
+                    status,
+                    notes,
+                    interviewDate: status === 'interview' && interview ? interview.toISOString() : undefined,
+                    clearInterviewDate: application.interviewDate !== null && interview === null ? true : undefined,
+                  })
+                }
                 loading={saving}
                 fullWidth
                 testID="application-save"
@@ -90,7 +97,7 @@ export function ApplicationSheet({ application, saving, onClose, onSave, onRemov
           </View>
         </View>
 
-        {status === 'interview' ? <InterviewPicker value={interview} onChange={setInterview} /> : null}
+        {status === 'interview' ? <InterviewPicker value={interview} onChange={setInterview} onClear={() => setInterview(null)} /> : null}
 
         <Input label="Notas" value={notes} onChangeText={setNotes} placeholder="Contacto, qué te preguntaron, pretensión salarial…" multiline numberOfLines={4} maxLength={2000} />
       </BottomSheet>

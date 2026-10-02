@@ -12,7 +12,7 @@ public static class SkillCatalog
 {
     public static IReadOnlyList<SkillDefinition> All { get; } =
     [
-        new("atencion-al-cliente", "Atención al cliente", ["atencion al usuario", "atencion al publico", "servicio al cliente", "atencion presencial", "atencion telefonica", "customer service", "orientacion al usuario"]),
+        new("atencion-al-cliente", "Atención al cliente", ["atencion al usuario", "atencion al publico", "servicio al cliente", "atencion presencial", "atencion telefonica", "customer service", "orientacion al usuario", "atencion al paciente", "atencion de pacientes", "atencion al ciudadano"]),
         new("gestion-documentaria", "Gestión documentaria", ["gestion documental", "gestion de documentos", "archivo", "documentacion", "tramite documentario", "mesa de partes", "archivo de documentos"]),
         new("facturacion", "Facturación", ["facturacion electronica", "emision de comprobantes", "emision de facturas", "comprobantes de pago", "sunat", "boletas y facturas"]),
         new("excel", "Excel", ["microsoft excel", "ms excel", "hojas de calculo", "tablas dinamicas"]),

@@ -65,6 +65,7 @@ api.MapJobs();
 api.MapMatches();
 api.MapApplications();
 api.MapCatalog();
+api.MapSources(app.Environment.IsDevelopment());
 api.MapResumes();
 api.MapAgent();
 

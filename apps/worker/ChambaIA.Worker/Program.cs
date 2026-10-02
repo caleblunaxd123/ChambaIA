@@ -22,6 +22,15 @@ builder.Services.AddQuartz(q =>
         .ForJob(heartbeat)
         .WithIdentity($"{nameof(HeartbeatJob)}-trigger")
         .WithCronSchedule(builder.Configuration.GetValue("Worker:HeartbeatCron", "0 0/1 * * * ?")));
+
+    var ingestion = new JobKey(nameof(IngestionJob));
+    q.AddJob<IngestionJob>(o => o.WithIdentity(ingestion));
+    q.AddTrigger(t => t
+        .ForJob(ingestion)
+        .WithIdentity($"{nameof(IngestionJob)}-trigger")
+        .WithCronSchedule(builder.Configuration.GetValue("Worker:IngestionCron", "0 0/30 * * * ?")));
+    // Also once shortly after start, so a fresh deploy does not wait half an hour for its first offers.
+    q.AddTrigger(t => t.ForJob(ingestion).WithIdentity($"{nameof(IngestionJob)}-startup").StartAt(DateBuilder.FutureDate(15, IntervalUnit.Second)));
 });
 builder.Services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
 
