@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, View } from 'react-native';
 
 import {
   useOverview, usePreferences, useProfile, useUpdatePreferences, useUpdateProfile, useUploadResume,
@@ -16,14 +16,12 @@ import { type PreferencesForm, preferencesFormSchema, preferencesToInput } from 
 import { firstName } from '@/lib/format';
 import { haptics } from '@/lib/haptics';
 import { useAuthStore } from '@/state/auth-store';
-import { Button } from '@/ui/Button';
-import { Card } from '@/ui/Card';
-import { ErrorState } from '@/ui/EmptyState';
-import { Icon } from '@/ui/Icon';
+import { Button, IconButton } from '@/ui/Button';
+import { ErrorState, InlineError } from '@/ui/EmptyState';
 import { Screen } from '@/ui/Screen';
 import { Skeleton } from '@/ui/Skeleton';
 import { Text } from '@/ui/Text';
-import { useTheme } from '@/ui/theme';
+import { fontFamily, useTheme } from '@/ui/theme';
 
 type Step = 'about' | 'cv' | 'processing' | 'review' | 'prefs' | 'ready';
 
@@ -124,11 +122,9 @@ function OnboardingFlow({ profile, prefs }: { profile: Profile; prefs: Preferenc
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <BackButton visible={step === 'cv' && !cvOnly || step === 'review' || step === 'prefs'} onPress={() => setStep(step === 'cv' ? 'about' : step === 'review' ? 'cv' : 'review')} />
             {cvOnly && step !== 'processing' ? (
-              <Pressable onPress={close} accessibilityLabel="Cerrar" hitSlop={12} style={{ marginLeft: 'auto' }}>
-                <Icon name="close" size={24} tone="muted" />
-              </Pressable>
+              <IconButton icon="close" label="Cerrar" onPress={close} variant="ghost" />
             ) : (
-              <Text variant="caption" tone="subtle" style={{ marginLeft: 'auto' }}>Paso {position + 1} de {flow.length}</Text>
+              <Text variant="caption" tone="subtle" style={{ marginLeft: 'auto', fontFamily: fontFamily.bold }}>Paso {position + 1} de {flow.length}</Text>
             )}
           </View>
           <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -197,13 +193,8 @@ function OnboardingFlow({ profile, prefs }: { profile: Profile; prefs: Preferenc
 }
 
 function BackButton({ visible, onPress }: { visible: boolean; onPress: () => void }) {
-  if (!visible) return <View />;
-  return (
-    <Pressable onPress={onPress} accessibilityLabel="Volver al paso anterior" hitSlop={12} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }} testID="onboarding-back">
-      <Icon name="chevron-back" size={20} tone="muted" />
-      <Text variant="caption" tone="muted">Atrás</Text>
-    </Pressable>
-  );
+  if (!visible) return <View style={{ height: 44 }} />;
+  return <IconButton icon="chevron-back" label="Volver al paso anterior" onPress={onPress} testID="onboarding-back" />;
 }
 
 type PreferencesStepProps = {
@@ -224,9 +215,9 @@ function PreferencesStep({ prefs, draft, onChange, onDone, saving, error }: Pref
 
   return (
     <View style={{ gap: 24 }}>
-      <Heading title="¿Qué buscas exactamente?" subtitle="Tu agente descartará lo que no sirva. Siempre puedes cambiarlo o decírselo por chat." />
+      <Heading icon="options-outline" title="¿Qué buscas exactamente?" subtitle="Tu agente descartará lo que no sirva. Siempre puedes cambiarlo o decírselo por chat." />
       <PreferencesFields control={control} draft={draft} onChange={onChange} showRoles={false} showAlerts={false} />
-      {error ? <Card tone="muted"><Text tone="danger">{error}</Text></Card> : null}
+      {error ? <InlineError message={error} /> : null}
       <Button label="Guardar y buscar" icon="search" onPress={handleSubmit(onDone)} loading={saving} fullWidth testID="onboarding-prefs-next" />
     </View>
   );

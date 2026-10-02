@@ -4,7 +4,7 @@ import { haptics } from '@/lib/haptics';
 
 import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
-import { useTheme } from './theme';
+import { fontFamily, useTheme } from './theme';
 
 type ChipProps = {
   label: string;
@@ -19,35 +19,61 @@ type ChipProps = {
 export function Chip({ label, selected = false, onPress, onRemove, icon, testID }: ChipProps) {
   const { colors, radius } = useTheme();
   const fg = selected ? colors.onPrimary : colors.text;
+
+  const body = (pressed: boolean) => ({
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    paddingLeft: 14,
+    paddingRight: onRemove ? 8 : 14,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: selected ? colors.primary : colors.border,
+    backgroundColor: selected ? colors.primary : pressed ? colors.surfaceMuted : colors.surface,
+  });
+
+  const content = (
+    <>
+      {icon ? <Icon name={icon} size={15} color={fg} /> : null}
+      <Text variant="caption" style={{ color: fg, fontFamily: selected ? fontFamily.bold : fontFamily.medium }}>{label}</Text>
+    </>
+  );
+
+  // Removable chips are a plain container with one real button (the ×): no button nested inside a button.
+  if (onRemove && !onPress) {
+    return (
+      <View testID={testID} style={body(false)}>
+        {content}
+        <Pressable
+          onPress={() => {
+            haptics.tap();
+            onRemove();
+          }}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={`Quitar ${label}`}
+        >
+          <Icon name="close-circle" size={18} color={colors.textSubtle} />
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
     <Pressable
       testID={testID}
-      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityRole="button"
       accessibilityState={{ selected }}
-      disabled={!onPress && !onRemove}
+      disabled={!onPress}
       onPress={() => {
         haptics.tap();
         onPress?.();
       }}
-      style={({ pressed }) => ({
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: radius.pill,
-        borderWidth: 1,
-        borderColor: selected ? colors.primary : colors.border,
-        backgroundColor: selected ? colors.primary : pressed ? colors.surfaceMuted : colors.surface,
-      })}
+      style={({ pressed }) => body(pressed)}
     >
-      {icon ? <Icon name={icon} size={15} color={fg} /> : null}
-      <Text variant="caption" style={{ color: fg }}>{label}</Text>
-      {onRemove ? (
-        <Pressable onPress={onRemove} hitSlop={8} accessibilityLabel={`Quitar ${label}`}>
-          <Icon name="close-circle" size={16} color={selected ? colors.onPrimary : colors.textSubtle} />
-        </Pressable>
-      ) : null}
+      {content}
+      {selected && onPress ? <Icon name="checkmark" size={15} color={fg} /> : null}
     </Pressable>
   );
 }
@@ -59,9 +85,9 @@ type SegmentedTabsProps<T extends string> = {
   scrollable?: boolean;
 };
 
-/** Pill-shaped tab switcher (feed tabs, tracker stages). */
+/** Pill-shaped tab switcher (feed tabs). */
 export function SegmentedTabs<T extends string>({ options, value, onChange, scrollable = false }: SegmentedTabsProps<T>) {
-  const { colors, radius } = useTheme();
+  const { colors, radius, shadow } = useTheme();
 
   const items = options.map((o) => {
     const active = o.value === value;
@@ -85,15 +111,15 @@ export function SegmentedTabs<T extends string>({ options, value, onChange, scro
           paddingHorizontal: scrollable ? 16 : 8,
           borderRadius: radius.pill,
           backgroundColor: active ? colors.surface : 'transparent',
-          boxShadow: active ? '0 1px 6px rgba(27, 36, 55, 0.12)' : undefined,
+          ...(active ? shadow.soft : null),
         }}
       >
-        <Text variant="caption" tone={active ? 'default' : 'muted'} style={{ fontFamily: active ? 'PlusJakartaSans_700Bold' : undefined }}>
+        <Text variant="caption" tone={active ? 'default' : 'muted'} style={{ fontFamily: active ? fontFamily.bold : fontFamily.medium }}>
           {o.label}
         </Text>
         {o.count !== undefined && o.count > 0 ? (
-          <View style={{ minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, backgroundColor: active ? colors.primary : colors.borderStrong, alignItems: 'center', justifyContent: 'center' }}>
-            <Text variant="label" style={{ color: colors.onPrimary, fontSize: 10.5, letterSpacing: 0 }}>{o.count}</Text>
+          <View style={{ minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, backgroundColor: active ? colors.primary : colors.border, alignItems: 'center', justifyContent: 'center' }}>
+            <Text variant="label" style={{ color: active ? colors.onPrimary : colors.textMuted, fontSize: 10.5, letterSpacing: 0 }}>{o.count > 99 ? '99+' : o.count}</Text>
           </View>
         ) : null}
       </Pressable>

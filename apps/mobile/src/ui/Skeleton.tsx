@@ -8,11 +8,13 @@ type SkeletonProps = {
   width?: DimensionValue;
   height?: number;
   radius?: number;
+  /** Placeholders on the brand gradient need a translucent white instead of the neutral grey. */
+  onHero?: boolean;
   style?: ViewStyle;
 };
 
 /** Pulsing placeholder shown while data loads. Calm on purpose: no flashing shimmer. */
-export function Skeleton({ width = '100%', height = 14, radius = 8, style }: SkeletonProps) {
+export function Skeleton({ width = '100%', height = 14, radius = 8, onHero = false, style }: SkeletonProps) {
   const { colors } = useTheme();
   const [opacity] = useState(() => new Animated.Value(0.55));
 
@@ -27,20 +29,25 @@ export function Skeleton({ width = '100%', height = 14, radius = 8, style }: Ske
     return () => loop.stop();
   }, [opacity]);
 
-  return <Animated.View style={[{ width, height, borderRadius: radius, backgroundColor: colors.border, opacity }, style]} />;
+  return <Animated.View style={[{ width, height, borderRadius: radius, backgroundColor: onHero ? colors.onHeroTint : colors.skeleton, opacity }, style]} />;
 }
 
 export function JobCardSkeleton() {
   return (
     <Card testID="job-card-skeleton">
-      <View style={{ gap: 12 }}>
-        <Skeleton width="30%" height={22} radius={11} />
-        <Skeleton width="75%" height={18} />
-        <Skeleton width="50%" height={14} />
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Skeleton width={80} height={24} radius={12} />
-          <Skeleton width={96} height={24} radius={12} />
+      <View style={{ gap: 14 }}>
+        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+          <Skeleton width={44} height={44} radius={14} />
+          <View style={{ flex: 1, gap: 8 }}>
+            <Skeleton width="75%" height={16} />
+            <Skeleton width="45%" height={12} />
+          </View>
         </View>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <Skeleton width={120} height={24} radius={12} />
+          <Skeleton width={70} height={24} radius={12} />
+        </View>
+        <Skeleton width="60%" height={12} />
       </View>
     </Card>
   );

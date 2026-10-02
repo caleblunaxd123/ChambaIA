@@ -3,13 +3,15 @@ import { View } from 'react-native';
 
 import { useDistricts } from '@/api/queries';
 import type { FeedFilters } from '@/api/endpoints';
-import type { WorkModality } from '@/api/schemas';
+import type { MatchCategory, WorkModality } from '@/api/schemas';
 import { modalityLabel } from '@/lib/format';
 import { BottomSheet } from '@/ui/BottomSheet';
 import { Button } from '@/ui/Button';
 import { Chip } from '@/ui/Chip';
 import { Select } from '@/ui/Select';
 import { Text } from '@/ui/Text';
+
+import { categoryStyle } from './MatchBadge';
 
 type FilterSheetProps = {
   visible: boolean;
@@ -28,6 +30,9 @@ const DATE_OPTIONS = [
 ];
 
 const MODALITIES: WorkModality[] = ['onSite', 'hybrid', 'remote'];
+
+// "Poco compatible" is never in the feed, so it is not offered as a filter.
+const CATEGORIES: MatchCategory[] = ['excellent', 'veryCompatible', 'compatible', 'review'];
 
 export function FilterSheet({ visible, value, onClose, onApply }: FilterSheetProps) {
   const [draft, setDraft] = useState<FeedFilters>(value);
@@ -49,11 +54,20 @@ export function FilterSheet({ visible, value, onClose, onApply }: FilterSheetPro
       title="Filtros"
       footer={
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Button label="Limpiar" variant="secondary" onPress={() => { onApply({ q: value.q }); onClose(); }} style={{ flex: 1 }} />
+          <Button label="Limpiar" variant="secondary" onPress={() => { onApply({ q: value.q }); onClose(); }} style={{ flex: 1 }} testID="filters-clear" />
           <Button label="Aplicar" onPress={() => { onApply(draft); onClose(); }} style={{ flex: 2 }} testID="filters-apply" />
         </View>
       }
     >
+      <View style={{ gap: 8 }}>
+        <Text variant="caption" tone="muted">Compatibilidad</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {CATEGORIES.map((c) => (
+            <Chip key={c} label={categoryStyle[c].label} icon={categoryStyle[c].icon} selected={draft.category === c} onPress={() => set('category', draft.category === c ? null : c)} testID={`filter-${c}`} />
+          ))}
+        </View>
+      </View>
+
       <View style={{ gap: 8 }}>
         <Text variant="caption" tone="muted">Modalidad</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>

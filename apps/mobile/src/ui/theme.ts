@@ -1,12 +1,17 @@
+import { useColorScheme } from 'react-native';
+
+import { useAppearance } from '@/state/appearance-store';
+
 /**
- * ChambaIA design tokens. Light theme first; `ThemeColors` is the single shape a dark palette must satisfy,
- * so adding dark mode later means adding one object and switching it in `useTheme`.
+ * ChambaIA design tokens. Every screen reads colours through `useTheme()`, so light and dark are just two objects
+ * of the same `ThemeColors` shape. Never hard-code a colour in a component: add a token here instead.
  */
 
 export type ThemeColors = {
   bg: string;
   surface: string;
   surfaceMuted: string;
+  surfaceRaised: string;
   border: string;
   borderStrong: string;
   text: string;
@@ -23,46 +28,117 @@ export type ThemeColors = {
   warning: string;
   warningTint: string;
   danger: string;
+  dangerPressed: string;
   dangerTint: string;
   info: string;
   infoTint: string;
   overlay: string;
+  skeleton: string;
+  /** Brand gradient used by hero cards, the welcome screen and the agent avatar. */
+  heroFrom: string;
+  heroTo: string;
+  onHero: string;
+  onHeroMuted: string;
+  onHeroTint: string;
+  /** Second data colour on the gradient (the "possible" segment). */
+  onHeroAccent: string;
+  /** "Live" dot on the agent status. */
+  live: string;
+  switchThumb: string;
 };
 
 export const lightColors: ThemeColors = {
-  bg: '#FBF9F6',
+  bg: '#F6F5F1',
   surface: '#FFFFFF',
-  surfaceMuted: '#F4F1EB',
-  border: '#EBE6DD',
-  borderStrong: '#D8D1C4',
-  text: '#1B2437',
-  textMuted: '#5B6578',
-  textSubtle: '#8A93A5',
+  surfaceMuted: '#EFEDE7',
+  surfaceRaised: '#FFFFFF',
+  border: '#E6E2D9',
+  borderStrong: '#D3CDC0',
+  text: '#13203A',
+  textMuted: '#556079',
+  textSubtle: '#8790A3',
   primary: '#0B7A75',
-  primaryPressed: '#096762',
-  primaryTint: '#E0F3F1',
+  primaryPressed: '#08645F',
+  primaryTint: '#DDF2EF',
   onPrimary: '#FFFFFF',
-  accent: '#FF8A3D',
-  accentTint: '#FFF0E3',
-  success: '#12945B',
-  successTint: '#E4F6EC',
-  warning: '#B86A06',
-  warningTint: '#FFF3DD',
-  danger: '#C8323F',
-  dangerTint: '#FDECEE',
-  info: '#2F6FEB',
-  infoTint: '#E8F0FE',
-  overlay: 'rgba(17, 24, 39, 0.45)',
+  accent: '#F2703A',
+  accentTint: '#FFEDE2',
+  success: '#0F8A54',
+  successTint: '#DFF4E8',
+  warning: '#A85F00',
+  warningTint: '#FFF1D6',
+  danger: '#C42B3A',
+  dangerPressed: '#F7D3D8',
+  dangerTint: '#FCE9EB',
+  info: '#2A63D8',
+  infoTint: '#E5EEFD',
+  overlay: 'rgba(12, 20, 33, 0.48)',
+  skeleton: '#E4E0D6',
+  heroFrom: '#07514E',
+  heroTo: '#0E8C83',
+  onHero: '#FFFFFF',
+  onHeroMuted: 'rgba(255, 255, 255, 0.82)',
+  onHeroTint: 'rgba(255, 255, 255, 0.16)',
+  onHeroAccent: '#FFD27A',
+  live: '#7CF0B6',
+  switchThumb: '#FFFFFF',
+};
+
+export const darkColors: ThemeColors = {
+  bg: '#0B1215',
+  surface: '#131C20',
+  surfaceMuted: '#1B262B',
+  surfaceRaised: '#18232A',
+  border: '#24333A',
+  borderStrong: '#34464E',
+  text: '#ECF2F1',
+  textMuted: '#A5B3B6',
+  textSubtle: '#728389',
+  primary: '#3CC2B5',
+  primaryPressed: '#30A99D',
+  primaryTint: '#123432',
+  onPrimary: '#042220',
+  accent: '#FF8D5C',
+  accentTint: '#3A2318',
+  success: '#45D493',
+  successTint: '#11301F',
+  warning: '#F2B544',
+  warningTint: '#33280F',
+  danger: '#FF6B76',
+  dangerPressed: '#4A1F24',
+  dangerTint: '#3A1A1E',
+  info: '#79A9FF',
+  infoTint: '#16243F',
+  overlay: 'rgba(0, 0, 0, 0.62)',
+  skeleton: '#223036',
+  heroFrom: '#063B39',
+  heroTo: '#0B6F68',
+  onHero: '#FFFFFF',
+  onHeroMuted: 'rgba(255, 255, 255, 0.8)',
+  onHeroTint: 'rgba(255, 255, 255, 0.14)',
+  onHeroAccent: '#FFD27A',
+  live: '#7CF0B6',
+  switchThumb: '#F4F7F7',
 };
 
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48 } as const;
 
 export const radius = { sm: 10, md: 14, lg: 20, xl: 28, pill: 999 } as const;
 
-export const shadow = {
-  card: { boxShadow: '0 2px 14px rgba(27, 36, 55, 0.07)' },
-  raised: { boxShadow: '0 8px 28px rgba(27, 36, 55, 0.14)' },
-} as const;
+type Shadows = { card: { boxShadow?: string }; raised: { boxShadow?: string }; soft: { boxShadow?: string } };
+
+const lightShadow: Shadows = {
+  card: { boxShadow: '0 1px 2px rgba(19, 32, 58, 0.04), 0 4px 16px rgba(19, 32, 58, 0.06)' },
+  raised: { boxShadow: '0 12px 32px rgba(19, 32, 58, 0.18)' },
+  soft: { boxShadow: '0 1px 6px rgba(19, 32, 58, 0.12)' },
+};
+
+// Shadows disappear on dark backgrounds; borders do the work there.
+const darkShadow: Shadows = {
+  card: {},
+  raised: { boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)' },
+  soft: { boxShadow: '0 1px 6px rgba(0, 0, 0, 0.4)' },
+};
 
 export const fontFamily = {
   regular: 'PlusJakartaSans_400Regular',
@@ -83,19 +159,30 @@ export const typography = {
 } as const;
 
 export type TextVariant = keyof typeof typography;
-export type TextTone = 'default' | 'muted' | 'subtle' | 'primary' | 'onPrimary' | 'success' | 'warning' | 'danger';
+export type TextTone = 'default' | 'muted' | 'subtle' | 'primary' | 'onPrimary' | 'onHero' | 'success' | 'warning' | 'danger' | 'info' | 'accent';
+
+export type ColorScheme = 'light' | 'dark';
 
 export type Theme = {
+  scheme: ColorScheme;
   colors: ThemeColors;
   spacing: typeof spacing;
   radius: typeof radius;
-  shadow: typeof shadow;
+  shadow: Shadows;
   typography: typeof typography;
 };
 
-export const lightTheme: Theme = { colors: lightColors, spacing, radius, shadow, typography };
+export const lightTheme: Theme = { scheme: 'light', colors: lightColors, spacing, radius, shadow: lightShadow, typography };
+export const darkTheme: Theme = { scheme: 'dark', colors: darkColors, spacing, radius, shadow: darkShadow, typography };
 
-/** Hook-shaped on purpose: when dark mode lands, only this function changes. */
+/** Resolves the user's choice ("Sistema" follows the phone) to a concrete scheme. */
+export function resolveScheme(preference: 'system' | ColorScheme, system: string | null | undefined): ColorScheme {
+  if (preference !== 'system') return preference;
+  return system === 'dark' ? 'dark' : 'light';
+}
+
 export function useTheme(): Theme {
-  return lightTheme;
+  const system = useColorScheme();
+  const preference = useAppearance((s) => s.preference);
+  return resolveScheme(preference, system) === 'dark' ? darkTheme : lightTheme;
 }

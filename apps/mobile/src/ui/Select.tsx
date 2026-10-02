@@ -7,7 +7,7 @@ import { BottomSheet } from './BottomSheet';
 import { Button } from './Button';
 import { Icon } from './Icon';
 import { Text } from './Text';
-import { useTheme } from './theme';
+import { fontFamily, useTheme } from './theme';
 
 export type Option<T extends string | number> = { value: T; label: string; description?: string };
 
@@ -98,7 +98,7 @@ function Field({ label, text, placeholder, error, onPress }: { label?: string; t
   const { colors, radius } = useTheme();
   return (
     <View style={{ gap: 6 }}>
-      {label ? <Text variant="caption" tone="muted">{label}</Text> : null}
+      {label ? <Text variant="caption" style={{ color: colors.textMuted, fontFamily: fontFamily.semibold }}>{label}</Text> : null}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}

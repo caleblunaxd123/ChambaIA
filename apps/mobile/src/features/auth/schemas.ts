@@ -18,3 +18,12 @@ export const registerSchema = z.object({
     .regex(/\d/, 'Incluye al menos un número.'),
 });
 export type RegisterForm = z.infer<typeof registerSchema>;
+
+/** Live checklist under the password field (mirrors the schema rules above). */
+export function passwordChecks(password: string): { label: string; ok: boolean }[] {
+  return [
+    { label: '8 caracteres o más', ok: password.length >= 8 },
+    { label: 'Una minúscula', ok: /[a-z]/.test(password) },
+    { label: 'Un número', ok: /\d/.test(password) },
+  ];
+}

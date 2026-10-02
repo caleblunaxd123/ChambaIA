@@ -65,6 +65,36 @@ public sealed class TrackerService(AppDbContext db, TimeProvider clock)
         return match;
     }
 
+    /// <summary>
+    /// Undoes "me interesa" / "descartar": the offer goes back to the feed as already seen. Jobs the user applied to are
+    /// left alone. A tracker card the user never wrote on is removed; one with notes stays as "found" so nothing is lost.
+    /// </summary>
+    public async Task<CandidateJobMatch?> ResetAsync(Guid userId, Guid jobId, CancellationToken ct)
+    {
+        var match = await FindMatchAsync(userId, jobId, ct);
+        if (match is null) return null;
+        if (match.Status is not (MatchStatus.Interested or MatchStatus.Dismissed)) return match;
+
+        var now = clock.GetUtcNow();
+        match.Status = MatchStatus.Seen;
+        match.UpdatedAt = now;
+
+        var application = await db.Applications.SingleOrDefaultAsync(a => a.UserId == userId && a.JobId == jobId, ct);
+        if (application is { Status: ApplicationStatus.Found or ApplicationStatus.Interested or ApplicationStatus.Discarded })
+        {
+            if (string.IsNullOrWhiteSpace(application.Notes) && application.InterviewDate is null)
+                db.Applications.Remove(application);
+            else
+            {
+                application.Status = ApplicationStatus.Found;
+                application.UpdatedAt = now;
+            }
+        }
+
+        await db.SaveChangesAsync(ct);
+        return match;
+    }
+
     /// <summary>Applies a tracker status change and mirrors it on the match.</summary>
     public async Task ApplyStatusAsync(JobApplication application, ApplicationStatus status, CancellationToken ct)
     {

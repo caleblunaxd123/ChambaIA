@@ -122,6 +122,48 @@ public class FeedAndTrackerTests(ApiFactory factory)
     }
 
     [Fact]
+    public async Task Reset_undoes_interested_and_dismiss_without_losing_notes_or_applications()
+    {
+        var client = await factory.DemoClientAsync();
+        var (items, _, _) = await FeedAsync(client, "/api/v1/matches?pageSize=50");
+        var saved = items[3].Job;
+        var dropped = items[4].Job;
+        var applied = items[5].Job;
+
+        // "Me interesa" → undo: back in the feed, out of "Guardadas", no empty tracker card left behind.
+        await client.PostAsync($"/api/v1/matches/{saved.Id}/interested", null);
+        var undoSave = await client.PostAsync($"/api/v1/matches/{saved.Id}/reset", null);
+        Assert.Equal(HttpStatusCode.OK, undoSave.StatusCode);
+        Assert.Equal("seen", (await undoSave.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("status").GetString());
+        var (savedTab, _, _) = await FeedAsync(client, "/api/v1/matches?tab=saved&pageSize=50");
+        Assert.DoesNotContain(savedTab, i => i.Job.Id == saved.Id);
+        var cards = await client.GetFromJsonAsync<JsonElement>("/api/v1/applications");
+        Assert.DoesNotContain(cards.EnumerateArray(), a => a.GetProperty("jobId").GetGuid() == saved.Id);
+
+        // "Descartar" a card with notes → undo: back in the feed and the notes survive.
+        await client.PostAsJsonAsync("/api/v1/applications", new { jobId = dropped.Id, status = "interested", notes = "Me llamó Rosa" });
+        await client.PostAsync($"/api/v1/matches/{dropped.Id}/dismiss", null);
+        Assert.Equal(HttpStatusCode.OK, (await client.PostAsync($"/api/v1/matches/{dropped.Id}/reset", null)).StatusCode);
+        var (forYou, _, _) = await FeedAsync(client, "/api/v1/matches?pageSize=50");
+        Assert.Contains(forYou, i => i.Job.Id == dropped.Id);
+        cards = await client.GetFromJsonAsync<JsonElement>("/api/v1/applications");
+        var kept = cards.EnumerateArray().Single(a => a.GetProperty("jobId").GetGuid() == dropped.Id);
+        Assert.Equal("found", kept.GetProperty("status").GetString());
+        Assert.Equal("Me llamó Rosa", kept.GetProperty("notes").GetString());
+
+        // A job the user already applied to is never touched.
+        var created = await client.PostAsJsonAsync("/api/v1/applications", new { jobId = applied.Id, status = "applied" });
+        var appliedId = (await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        var noop = await client.PostAsync($"/api/v1/matches/{applied.Id}/reset", null);
+        Assert.Equal("applied", (await noop.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("status").GetString());
+
+        Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsync($"/api/v1/matches/{Guid.NewGuid()}/reset", null)).StatusCode);
+
+        await client.DeleteAsync($"/api/v1/applications/{kept.GetProperty("id").GetGuid()}");
+        await client.DeleteAsync($"/api/v1/applications/{appliedId}");
+    }
+
+    [Fact]
     public async Task Tracker_walks_through_the_pipeline_and_stamps_the_application_date()
     {
         var client = await factory.DemoClientAsync();

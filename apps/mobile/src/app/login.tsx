@@ -8,9 +8,10 @@ import { type LoginForm, loginSchema } from '@/features/auth/schemas';
 import { useLogin } from '@/features/auth/useAuthActions';
 import { haptics } from '@/lib/haptics';
 import { Button } from '@/ui/Button';
-import { Card } from '@/ui/Card';
+import { InlineError } from '@/ui/EmptyState';
 import { FormInput } from '@/ui/Input';
 import { Text } from '@/ui/Text';
+import { fontFamily } from '@/ui/theme';
 
 const demoEmail = process.env.EXPO_PUBLIC_DEMO_EMAIL;
 const demoPassword = process.env.EXPO_PUBLIC_DEMO_PASSWORD;
@@ -27,18 +28,14 @@ export default function LoginScreen() {
   );
 
   return (
-    <AuthLayout title="Bienvenida de vuelta" subtitle="Tu agente siguió buscando mientras no estabas.">
+    <AuthLayout title="¡Hola de nuevo!" subtitle="Tu agente siguió buscando mientras no estabas.">
       <View style={{ gap: 16 }}>
-        <FormInput control={control} name="email" label="Correo" icon="mail-outline" placeholder="tu@correo.com" autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" />
-        <FormInput control={control} name="password" label="Contraseña" icon="lock-closed-outline" placeholder="Tu contraseña" secureTextEntry autoComplete="current-password" textContentType="password" onSubmitEditing={submit} />
+        <FormInput control={control} name="email" label="Correo" icon="mail-outline" placeholder="tu@correo.com" autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" returnKeyType="next" />
+        <FormInput control={control} name="password" label="Contraseña" icon="lock-closed-outline" placeholder="Tu contraseña" secureTextEntry autoComplete="current-password" textContentType="password" returnKeyType="go" onSubmitEditing={submit} />
 
-        {login.error ? (
-          <Card tone="muted">
-            <Text tone="danger" testID="login-error">{login.error.message}</Text>
-          </Card>
-        ) : null}
+        {login.error ? <InlineError message={login.error.message} testID="login-error" /> : null}
 
-        <Button label="Entrar" onPress={submit} loading={login.isPending} fullWidth testID="login-submit" />
+        <Button label="Entrar" trailingIcon="arrow-forward" onPress={submit} loading={login.isPending} fullWidth testID="login-submit" />
 
         {__DEV__ && demoEmail && demoPassword ? (
           <Button
@@ -55,7 +52,7 @@ export default function LoginScreen() {
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
         <Text tone="muted">¿Aún no tienes cuenta?</Text>
         <Link href="/register" replace>
-          <Text tone="primary" style={{ fontFamily: 'PlusJakartaSans_700Bold' }}>Créala gratis</Text>
+          <Text tone="primary" style={{ fontFamily: fontFamily.bold }}>Créala gratis</Text>
         </Link>
       </View>
     </AuthLayout>

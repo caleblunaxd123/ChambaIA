@@ -78,6 +78,8 @@ export const api = {
     seen: (jobId: string) => request(`/matches/${jobId}/seen`, { method: 'POST' }),
     interested: (jobId: string) => request(`/matches/${jobId}/interested`, { method: 'POST', schema: matchSummarySchema }),
     dismiss: (jobId: string) => request(`/matches/${jobId}/dismiss`, { method: 'POST', schema: matchSummarySchema }),
+    /** Undo for "me interesa" / "descartar": the offer goes back to the feed. */
+    reset: (jobId: string) => request(`/matches/${jobId}/reset`, { method: 'POST', schema: matchSummarySchema }),
   },
 
   jobs: {

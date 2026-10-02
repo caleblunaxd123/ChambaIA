@@ -1,83 +1,117 @@
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import type { FeedItem } from '@/api/schemas';
 import { formatRelativeTime, formatSalary, isFresh, modalityLabel } from '@/lib/format';
+import { Avatar } from '@/ui/Avatar';
 import { Badge } from '@/ui/Badge';
 import { Button } from '@/ui/Button';
-import { Card } from '@/ui/Card';
 import { Icon } from '@/ui/Icon';
 import { Text } from '@/ui/Text';
-import { useTheme } from '@/ui/theme';
+import { fontFamily, useTheme } from '@/ui/theme';
 
 import { MatchBadge } from './MatchBadge';
 
 type JobCardProps = {
   item: FeedItem;
   onOpen: () => void;
-  onInterested?: () => void;
+  onSave?: () => void;
+  onUnsave?: () => void;
   onDismiss?: () => void;
   busy?: boolean;
 };
 
-export function JobCard({ item, onOpen, onInterested, onDismiss, busy }: JobCardProps) {
-  const { colors } = useTheme();
+/**
+ * One offer in a list. The body opens the detail; the footer holds the quick reactions. They are siblings, never
+ * nested, so web renders valid HTML and screen readers announce each control once.
+ */
+export function JobCard({ item, onOpen, onSave, onUnsave, onDismiss, busy }: JobCardProps) {
+  const { colors, radius, shadow } = useTheme();
   const { job, match } = item;
   const salary = formatSalary(job);
   const saved = match?.status === 'interested';
-  const fresh = isFresh(job.postedAt);
+  const applied = match?.status === 'applied' || match?.status === 'interview' || match?.status === 'offer';
+  const fresh = isFresh(job.postedAt) && match?.status === 'new';
+  const place = job.modality === 'remote' ? 'Remoto' : `${job.district ?? job.city} · ${modalityLabel[job.modality]}`;
 
   return (
-    <Card onPress={onOpen} testID={`job-card-${job.id}`}>
-      <View style={{ gap: 12 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          {match ? <MatchBadge category={match.category} /> : <Badge label="SIN ANALIZAR" tone="neutral" />}
+    <View testID={`job-card-${job.id}`} style={{ backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', ...shadow.card }}>
+      <Pressable
+        onPress={onOpen}
+        accessibilityRole="button"
+        accessibilityLabel={`${job.title} en ${job.company}. ${match ? `Compatibilidad: ${match.categoryLabel}.` : ''} Ver detalle`}
+        style={({ pressed }) => ({ padding: 16, gap: 12, backgroundColor: pressed ? colors.surfaceMuted : 'transparent' })}
+      >
+        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+          <Avatar name={job.company} size={46} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text variant="heading" numberOfLines={2}>{job.title}</Text>
+            <Text variant="caption" tone="muted" numberOfLines={1}>{job.company}</Text>
+          </View>
+          {fresh ? <View accessibilityLabel="Nueva" style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.accent, marginTop: 6 }} /> : null}
+        </View>
+
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+          {match ? <MatchBadge category={match.category} size="sm" /> : <Badge label="Sin analizar" tone="neutral" size="sm" />}
+          {applied ? <Badge label="Ya postulaste" tone="info" icon="paper-plane" size="sm" /> : null}
           {fresh ? <Badge label="Nueva" tone="accent" icon="flash" size="sm" /> : null}
         </View>
 
-        <View style={{ gap: 2 }}>
-          <Text variant="heading" numberOfLines={2}>{job.title}</Text>
-          <Text tone="muted" numberOfLines={1}>{job.company}</Text>
-        </View>
-
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 14, rowGap: 6 }}>
-          <Meta icon="location-outline" text={job.district ?? job.city} />
-          <Meta icon="business-outline" text={modalityLabel[job.modality]} />
-          {salary ? <Meta icon="cash-outline" text={salary} strong /> : <Meta icon="cash-outline" text="Sueldo no indicado" />}
-          {job.postedAt ? <Meta icon="time-outline" text={formatRelativeTime(job.postedAt)} /> : null}
+        <View style={{ gap: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Icon name="cash-outline" size={16} tone={salary ? 'primary' : 'subtle'} />
+            <Text variant="bodyStrong" tone={salary ? 'default' : 'subtle'} style={salary ? { fontFamily: fontFamily.bold } : undefined}>
+              {salary ?? 'Sueldo no indicado'}
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Icon name="location-outline" size={16} tone="subtle" />
+            <Text variant="caption" tone="muted" numberOfLines={1} style={{ flexShrink: 1 }}>{place}</Text>
+            {job.postedAt ? (
+              <>
+                <Text variant="caption" tone="subtle">·</Text>
+                <Text variant="caption" tone="subtle">{formatRelativeTime(job.postedAt)}</Text>
+              </>
+            ) : null}
+          </View>
         </View>
 
         {match && (match.topReasons.length > 0 || match.topWarnings.length > 0) ? (
-          <View style={{ gap: 5, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border }}>
-            {match.topReasons.slice(0, 3).map((reason) => (
+          <View style={{ gap: 6, padding: 12, borderRadius: radius.md, backgroundColor: colors.bg }}>
+            {match.topReasons.slice(0, 2).map((reason) => (
               <Line key={reason} kind="ok" text={reason} />
             ))}
-            {match.topWarnings.slice(0, 2).map((warning) => (
+            {match.topWarnings.slice(0, 1).map((warning) => (
               <Line key={warning} kind="warn" text={warning} />
             ))}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+              <Text variant="caption" tone="primary" style={{ fontFamily: fontFamily.bold }}>Ver por qué encaja</Text>
+              <Icon name="arrow-forward" size={14} tone="primary" />
+            </View>
           </View>
         ) : null}
+      </Pressable>
 
-        {onInterested || onDismiss ? (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            <Button label="Ver análisis" onPress={onOpen} variant="secondary" size="sm" icon="analytics-outline" />
-            {onInterested ? (
-              <Button label={saved ? 'Guardada' : 'Me interesa'} onPress={onInterested} variant={saved ? 'ghost' : 'primary'} size="sm" icon={saved ? 'bookmark' : 'bookmark-outline'} disabled={busy || saved} />
-            ) : null}
-            {onDismiss ? <Button label="Descartar" onPress={onDismiss} variant="ghost" size="sm" disabled={busy} /> : null}
-          </View>
-        ) : null}
-      </View>
-    </Card>
-  );
-}
-
-function Meta({ icon, text, strong }: { icon: 'location-outline' | 'business-outline' | 'cash-outline' | 'time-outline'; text: string; strong?: boolean }) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-      <Icon name={icon} size={15} tone="subtle" />
-      <Text variant="caption" tone={strong ? 'default' : 'muted'} style={strong ? { fontFamily: 'PlusJakartaSans_700Bold' } : undefined}>
-        {text}
-      </Text>
+      {onSave || onDismiss ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 10, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.border }}>
+          {onDismiss && !applied ? (
+            <Button label="Descartar" icon="close" variant="ghost" size="sm" onPress={onDismiss} disabled={busy} testID={`job-dismiss-${job.id}`} accessibilityLabel={`Descartar ${job.title}`} />
+          ) : (
+            <View />
+          )}
+          {onSave && !applied ? (
+            <Button
+              label={saved ? 'Guardada' : 'Guardar'}
+              icon={saved ? 'bookmark' : 'bookmark-outline'}
+              variant={saved ? 'primary' : 'tonal'}
+              size="sm"
+              onPress={saved ? onUnsave : onSave}
+              disabled={busy || (saved && !onUnsave)}
+              testID={`job-save-${job.id}`}
+              accessibilityLabel={saved ? `Quitar ${job.title} de guardadas` : `Guardar ${job.title}`}
+            />
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }

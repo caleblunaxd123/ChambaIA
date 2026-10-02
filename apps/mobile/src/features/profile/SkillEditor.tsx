@@ -46,7 +46,7 @@ export function SkillEditor({ skills, onChange }: Props) {
 
   return (
     <View style={{ gap: 12 }}>
-      <Input label="Habilidades" value={draft} onChangeText={setDraft} placeholder="Escribe una habilidad y presiona enter" onSubmitEditing={() => add(draft)} returnKeyType="done" icon="add-circle-outline" />
+      <Input label="Agregar una habilidad" value={draft} onChangeText={setDraft} placeholder="Ej.: Excel, atención al cliente…" hint="Toca una sugerencia o escribe y presiona enter." onSubmitEditing={() => add(draft)} returnKeyType="done" icon="add-circle-outline" />
 
       {suggestions.length > 0 ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>

@@ -81,6 +81,10 @@ public static class MatchesEndpoints
         group.MapPost("/{jobId:guid}/dismiss", async (Guid jobId, HttpContext http, TrackerService tracker, CancellationToken ct) =>
             await tracker.DismissAsync(http.User.GetUserId(), jobId, ct) is { } m ? Results.Ok(m.ToSummary()) : Results.NotFound());
 
+        // Undo for "me interesa" and "descartar" (the app offers it right after either action).
+        group.MapPost("/{jobId:guid}/reset", async (Guid jobId, HttpContext http, TrackerService tracker, CancellationToken ct) =>
+            await tracker.ResetAsync(http.User.GetUserId(), jobId, ct) is { } m ? Results.Ok(m.ToSummary()) : Results.NotFound());
+
         return api;
     }
 

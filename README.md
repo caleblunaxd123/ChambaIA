@@ -7,7 +7,7 @@ duplicados y trabajos incompatibles, calcula qué tan bien encajas, te explica p
 > barato; los modelos de pago se reservan para acciones premium. Todo funciona aunque las APIs de IA estén caídas.
 > Ver [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) y [docs/AI-COSTS.md](docs/AI-COSTS.md).
 
-Estado: **Fases 1 y 2 completas** (base ejecutable + CV, perfil y onboarding). Ver [docs/ROADMAP.md](docs/ROADMAP.md).
+Estado: **Fases 1 y 2 completas** (base ejecutable + CV, perfil y onboarding) **+ renovación de UX/diseño** (modo oscuro, deshacer, tablero con fechas de entrevista). Ver [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Estructura
 
@@ -91,7 +91,7 @@ docker compose --profile full up -d --build
 
 ```bash
 dotnet build ChambaIA.sln            # 0 errores, 0 advertencias (TreatWarningsAsErrors)
-dotnet test ChambaIA.sln             # 150 pruebas (dominio + integración); las de integración levantan PostgreSQL con Testcontainers (requiere Docker)
+dotnet test ChambaIA.sln             # 151 pruebas (dominio + integración); las de integración levantan PostgreSQL con Testcontainers (requiere Docker)
 cd apps/mobile
 npm run typecheck && npm run lint && npm test
 ```
@@ -114,7 +114,20 @@ npm run typecheck && npm run lint && npm test
 - **Perfil**: CV actual (reemplazar / eliminar), borrar historial y eliminar cuenta (borra también los archivos de CV).
 - Plan FREE/PRO: 1 CV (subir otro reemplaza y borra el anterior del disco); PRO+: hasta 5.
 
-Lo que **todavía no** existe (ver roadmap): enriquecimiento con LLM barato (opcional, fase 8), OCR de CV escaneados, ingesta real de ofertas, embeddings, notificaciones push, abstracción de proveedores de IA, preparación de postulación, dark mode.
+Lo que **todavía no** existe (ver roadmap): enriquecimiento con LLM barato (opcional, fase 8), OCR de CV escaneados, ingesta real de ofertas, embeddings, notificaciones push, abstracción de proveedores de IA, preparación de postulación.
+
+## Renovación de UX y diseño
+
+- **Sistema de diseño con modo claro y oscuro**: todos los colores son tokens (`src/ui/theme.ts`); el usuario elige *Automático / Claro / Oscuro* en Perfil y se recuerda. Gradiente de marca en tarjetas héroe, avatares de empresa con color estable, barras de progreso, filas tipo ajustes, toasts.
+- **Bienvenida** para quien no tiene sesión (propuesta de valor + «Crear mi cuenta» / «Ya tengo cuenta»). Registro con checklist de contraseña en vivo.
+- **Inicio**: estado del agente, reparto de nuevas ofertas (muy compatibles / posibles / no convienen), accesos directos que abren Empleos ya filtrado, **fuerza del perfil** con el siguiente paso concreto, resumen de postulaciones con la próxima entrevista.
+- **Empleos**: contador de resultados, filtros rápidos por modalidad, filtro por compatibilidad, tarjetas rediseñadas (sueldo destacado, motivos, «Ver por qué encaja»).
+- **Acciones reversibles**: guardar, quitar de guardadas y descartar son optimistas y muestran un toast con **«Deshacer»** (nuevo endpoint `POST /matches/{jobId}/reset`).
+- **Detalle**: datos clave en mosaicos, veredicto con color por categoría, «Tienes X de Y habilidades», descripción plegable, compartir, barra fija con Guardar + Postular.
+- **Postulaciones**: mosaicos por etapa con contadores, botón de **siguiente etapa en un toque** («Ya postulé», «Me llamaron a entrevista»…) con deshacer, y **fecha/hora de entrevista** sin dependencias nativas.
+- **Agente**: chat a pantalla completa, cada respuesta muestra qué cambió en tu búsqueda, memoria en una hoja («Recuerdo N»), sugerencias que desaparecen al usarse.
+- **Formularios**: aviso de cambios sin guardar al cerrar, botón deshabilitado si no hay cambios, errores en línea consistentes, anillo de foco.
+- Correcciones: botones anidados dentro de botones (HTML inválido en web), etiquetas de la barra inferior cortadas, campo de años/meses que borraba la letra «D» en vez de no-dígitos, títulos de error en inglés («Not Found»), saneado de nombres de CV con rutas de Windows en servidores Linux.
 
 ## Datos demo
 

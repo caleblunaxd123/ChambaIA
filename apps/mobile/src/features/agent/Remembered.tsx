@@ -17,6 +17,15 @@ const toInput = (p: Preferences): PreferencesInput => {
   return rest;
 };
 
+/** How many things the agent remembers (shown on the "Recuerdo N" button). */
+export function rememberedCount(p: Preferences): number {
+  return (
+    p.preferredRoles.length + p.excludedDistricts.length + p.excludedKeywords.length + p.excludedRoles.length +
+    p.preferredModalities.length + p.preferredDistricts.length +
+    (p.minSalary != null ? 1 : 0) + (p.maxCommuteMinutes != null ? 1 : 0) + (p.homeDistrict ? 1 : 0) + (p.weekdaysOnly ? 1 : 0)
+  );
+}
+
 /** Everything the agent currently remembers about what the user wants. Each chip can be removed right here. */
 export function Remembered({ prefs, onChange, disabled }: Props) {
   const edit = (patch: Partial<PreferencesInput>) => {
@@ -51,7 +60,7 @@ export function Remembered({ prefs, onChange, disabled }: Props) {
 
   const visible = groups.filter((g) => g.chips.length > 0);
   if (visible.length === 0) {
-    return <Text tone="muted">Todavía no me has dicho qué buscas. Escríbeme abajo o completa tus preferencias en tu perfil.</Text>;
+    return <Text tone="muted">Todavía no me has dicho qué buscas. Escríbeme en el chat o completa tus preferencias.</Text>;
   }
 
   return (

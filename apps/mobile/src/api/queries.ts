@@ -1,9 +1,9 @@
-import { type QueryClient, keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type InfiniteData, type QueryClient, keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuthStore } from '@/state/auth-store';
 
 import { type FeedFilters, type FeedTab, type PreferencesInput, type ProfileInput, api } from './endpoints';
-import type { ApplicationStatus } from './schemas';
+import type { ApplicationStatus, FeedPage, MatchStatus } from './schemas';
 
 /** One place for cache keys so invalidation can never drift from the queries. */
 export const keys = {
@@ -38,11 +38,11 @@ export function useJobDetail(id: string) {
 
 /** Reference data (districts, skills) never changes during a session. */
 export function useDistricts() {
-  return useQuery({ queryKey: ["catalog", "districts"], queryFn: api.catalog.districts, staleTime: Infinity });
+  return useQuery({ queryKey: ['catalog', 'districts'], queryFn: api.catalog.districts, staleTime: Infinity });
 }
 
 export function useSkillCatalog() {
-  return useQuery({ queryKey: ["catalog", "skills"], queryFn: api.catalog.skills, staleTime: Infinity });
+  return useQuery({ queryKey: ['catalog', 'skills'], queryFn: api.catalog.skills, staleTime: Infinity });
 }
 
 export function useApplications() {
@@ -75,14 +75,65 @@ export function useSeenMutation() {
   });
 }
 
+type FeedSnapshot = [readonly unknown[], InfiniteData<FeedPage> | undefined][];
+
+/**
+ * Optimistic feed edit: the card reacts the moment it is tapped, and the snapshot lets us roll back if the request
+ * fails. `status: null` removes the job from the lists (dismiss).
+ */
+async function patchFeedCache(client: QueryClient, jobId: string, status: MatchStatus | null): Promise<FeedSnapshot> {
+  await client.cancelQueries({ queryKey: keys.feedAll });
+  const snapshot = client.getQueriesData<InfiniteData<FeedPage>>({ queryKey: keys.feedAll });
+  client.setQueriesData<InfiniteData<FeedPage>>({ queryKey: keys.feedAll }, (data) =>
+    data
+      ? {
+          ...data,
+          pages: data.pages.map((page) => ({
+            ...page,
+            items:
+              status === null
+                ? page.items.filter((i) => i.job.id !== jobId)
+                : page.items.map((i) => (i.job.id === jobId && i.match ? { ...i, match: { ...i.match, status } } : i)),
+          })),
+        }
+      : data,
+  );
+  return snapshot;
+}
+
+function restoreFeedCache(client: QueryClient, snapshot: FeedSnapshot | undefined) {
+  snapshot?.forEach(([key, data]) => client.setQueryData(key, data));
+}
+
 export function useInterestedMutation() {
   const client = useQueryClient();
-  return useMutation({ mutationFn: (jobId: string) => api.matches.interested(jobId), onSuccess: () => invalidateMatchData(client) });
+  return useMutation({
+    mutationFn: (jobId: string) => api.matches.interested(jobId),
+    onMutate: (jobId) => patchFeedCache(client, jobId, 'interested'),
+    onError: (_error, _jobId, snapshot) => restoreFeedCache(client, snapshot),
+    onSettled: () => invalidateMatchData(client),
+  });
 }
 
 export function useDismissMutation() {
   const client = useQueryClient();
-  return useMutation({ mutationFn: (jobId: string) => api.matches.dismiss(jobId), onSuccess: () => invalidateMatchData(client) });
+  return useMutation({
+    mutationFn: (jobId: string) => api.matches.dismiss(jobId),
+    onMutate: (jobId) => patchFeedCache(client, jobId, null),
+    onError: (_error, _jobId, snapshot) => restoreFeedCache(client, snapshot),
+    onSettled: () => invalidateMatchData(client),
+  });
+}
+
+/** Undo of interested/dismiss. */
+export function useResetMatchMutation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (jobId: string) => api.matches.reset(jobId),
+    onMutate: (jobId) => patchFeedCache(client, jobId, 'seen'),
+    onError: (_error, _jobId, snapshot) => restoreFeedCache(client, snapshot),
+    onSettled: () => invalidateMatchData(client),
+  });
 }
 
 export function useCreateApplication() {
