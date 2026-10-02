@@ -129,6 +129,13 @@ npm run typecheck && npm run lint && npm test
 - **Perfil**: CV actual (reemplazar / eliminar), borrar historial y eliminar cuenta (borra también los archivos de CV).
 - Plan FREE/PRO: 1 CV (subir otro reemplaza y borra el anterior del disco); PRO+: hasta 5.
 
+## Qué incluye la Fase 7 (tracker)
+
+- **Recordatorios de entrevista**: un aviso el día anterior (entre 24 h y 6 h antes: «Mañana tienes una entrevista… a las 15:30») y otro poco antes («Tu entrevista es en 2 horas»). Si cambias la fecha, vuelven a avisar para la nueva; nunca de noche (esperan a las 7 a. m.) y no cuentan contra el tope diario de ofertas nuevas.
+- **Seguimiento amable**: si postulaste hace una semana y no tocaste la postulación, un único aviso «¿Novedades de {empresa}?». Máximo uno por día, solo de 9 a. m. a 8 p. m., y se rinde a los 30 días.
+- **Historial por postulación** (`GET /api/v1/applications/{id}/history`): cuándo la guardaste, postulaste, te citaron, agendaste o quitaste la entrevista. Visible en la hoja «Seguimiento». Editar solo las notas no genera ruido.
+- Los avisos nuevos usan la misma bandeja y el mismo canal que la Fase 6 (ver [docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md)).
+
 ## Qué incluye la Fase 6 (alertas)
 
 - **El agente avisa solo cuando vale la pena**: al menos una oferta muy compatible, nunca de 10 p. m. a 7 a. m., máximo 4 por día, y según la frecuencia que elijas (instantánea / 2 h / 6 h / diaria). Lo que ya viste al configurar tu perfil no se anuncia como novedad.

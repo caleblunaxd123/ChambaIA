@@ -1,3 +1,6 @@
+import type { NotificationKind } from '@/api/schemas';
+import type { IconName } from '@/ui/Icon';
+
 /**
  * Pure rules for push notifications: can this device receive them, where does a tapped notice go, how do we word the
  * state. Kept free of native modules so it is fully unit-tested; the native side lives in push-service.ts.
@@ -74,6 +77,23 @@ export function describePushStatus(status: PushStatus, pushEnabled: boolean): St
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export type NoticeVisual = { icon: IconName; tone: 'success' | 'accent' | 'info' | 'primary' };
+
+/** Icon and colour of each kind of notice in the inbox: offers are green, interviews orange, nudges blue. */
+export function noticeVisual(kind: NotificationKind): NoticeVisual {
+  switch (kind) {
+    case 'newJobs':
+      return { icon: 'sparkles', tone: 'success' };
+    case 'interviewDayBefore':
+    case 'interviewSoon':
+      return { icon: 'calendar', tone: 'accent' };
+    case 'followUp':
+      return { icon: 'chatbubble-ellipses', tone: 'info' };
+    default:
+      return { icon: 'notifications', tone: 'primary' };
+  }
+}
 
 export type NotificationTarget = { kind: 'job'; jobId: string } | { kind: 'inbox' };
 

@@ -20,6 +20,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<AiUsage> AiUsages => Set<AiUsage>();
     public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
     public DbSet<NotificationLog> Notifications => Set<NotificationLog>();
+    public DbSet<ApplicationEvent> ApplicationEvents => Set<ApplicationEvent>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {

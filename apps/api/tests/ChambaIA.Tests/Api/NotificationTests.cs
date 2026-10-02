@@ -11,6 +11,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
+using static ChambaIA.Tests.Api.PushTestKit;
+
 namespace ChambaIA.Tests.Api;
 
 /// <summary>Phase 6: device registration, the inbox, and the digest that decides when the agent speaks.</summary>
@@ -26,38 +28,7 @@ public class NotificationTests(ApiFactory factory)
         public Task<IReadOnlyList<RawJob>> FetchJobsAsync(DateTimeOffset? since, CancellationToken ct) => Task.FromResult(jobs());
     }
 
-    /// <summary>Records what would be pushed; tokens in <see cref="Dead"/> come back as unregistered, like Expo does.</summary>
-    private sealed class FakePush : IPushSender
-    {
-        public bool IsEnabled { get; set; } = true;
-        public HashSet<string> Dead { get; } = [];
-        public List<PushMessage> Sent { get; } = [];
-
-        public Task<PushResult> SendAsync(IReadOnlyList<PushMessage> messages, CancellationToken ct)
-        {
-            Sent.AddRange(messages);
-            var dead = messages.Where(m => Dead.Contains(m.To)).Select(m => m.To).ToList();
-            return Task.FromResult(new PushResult(messages.Count - dead.Count, dead.Count, dead));
-        }
-
-        public List<PushMessage> To(string token) => Sent.Where(m => m.To == token).ToList();
-    }
-
-    private sealed class FixedClock(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
-    }
-
     private static string Unique(string prefix) => $"{prefix}-{Guid.NewGuid():N}"[..20];
-
-    private static string NewToken() => $"ExponentPushToken[{Guid.NewGuid():N}]";
-
-    /// <summary>A moment in the future (so every real timestamp is "before" it) at the given Lima wall-clock hour.</summary>
-    private static DateTimeOffset LimaAt(int hour, int minute = 0, int daysAhead = 2)
-    {
-        var day = DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(-5)).Date.AddDays(daysAhead);
-        return new DateTimeOffset(day.Year, day.Month, day.Day, hour, minute, 0, TimeSpan.FromHours(-5)).ToUniversalTime(); // the real clock is always UTC
-    }
 
     private async Task<(HttpClient Client, Guid UserId, string Token)> OnboardedUserAsync(string frequency = "instant", bool push = true, bool withDevice = true)
     {

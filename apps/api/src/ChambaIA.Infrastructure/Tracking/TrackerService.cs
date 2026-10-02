@@ -30,9 +30,14 @@ public sealed class TrackerService(AppDbContext db, TimeProvider clock)
 
         var application = await db.Applications.SingleOrDefaultAsync(a => a.UserId == userId && a.JobId == jobId, ct);
         if (application is null)
-            db.Applications.Add(new JobApplication { UserId = userId, JobId = jobId, Status = ApplicationStatus.Interested });
+        {
+            application = new JobApplication { UserId = userId, JobId = jobId, Status = ApplicationStatus.Interested };
+            db.Applications.Add(application);
+            LogStatus(application, null, ApplicationStatus.Interested);
+        }
         else if (application.Status is ApplicationStatus.Found or ApplicationStatus.Discarded)
         {
+            LogStatus(application, application.Status, ApplicationStatus.Interested);
             application.Status = ApplicationStatus.Interested;
             application.UpdatedAt = clock.GetUtcNow();
         }
@@ -57,6 +62,7 @@ public sealed class TrackerService(AppDbContext db, TimeProvider clock)
         var application = await db.Applications.SingleOrDefaultAsync(a => a.UserId == userId && a.JobId == jobId, ct);
         if (application is { Status: ApplicationStatus.Found or ApplicationStatus.Interested })
         {
+            LogStatus(application, application.Status, ApplicationStatus.Discarded);
             application.Status = ApplicationStatus.Discarded;
             application.UpdatedAt = clock.GetUtcNow();
         }
@@ -86,6 +92,7 @@ public sealed class TrackerService(AppDbContext db, TimeProvider clock)
                 db.Applications.Remove(application);
             else
             {
+                LogStatus(application, application.Status, ApplicationStatus.Found);
                 application.Status = ApplicationStatus.Found;
                 application.UpdatedAt = now;
             }
@@ -99,6 +106,8 @@ public sealed class TrackerService(AppDbContext db, TimeProvider clock)
     public async Task ApplyStatusAsync(JobApplication application, ApplicationStatus status, CancellationToken ct)
     {
         var now = clock.GetUtcNow();
+        var isNew = db.Entry(application).State == EntityState.Added;
+        if (isNew || application.Status != status) LogStatus(application, isNew ? null : application.Status, status);
         application.Status = status;
         application.UpdatedAt = now;
         if (status == ApplicationStatus.Applied) application.AppliedAt ??= now;
@@ -120,6 +129,23 @@ public sealed class TrackerService(AppDbContext db, TimeProvider clock)
 
         await db.SaveChangesAsync(ct);
     }
+
+    /// <summary>History: the stage changed (or the card was created, when `from` is null). Saved with the caller's next SaveChanges.</summary>
+    private void LogStatus(JobApplication application, ApplicationStatus? from, ApplicationStatus to) =>
+        db.ApplicationEvents.Add(new ApplicationEvent
+        {
+            ApplicationId = application.Id, Kind = ApplicationEventKind.StatusChanged, FromStatus = from, ToStatus = to, At = clock.GetUtcNow()
+        });
+
+    /// <summary>History: an interview date was set (or removed, when `date` is null).</summary>
+    public void RecordInterview(JobApplication application, DateTimeOffset? date) =>
+        db.ApplicationEvents.Add(new ApplicationEvent
+        {
+            ApplicationId = application.Id,
+            Kind = date is null ? ApplicationEventKind.InterviewCleared : ApplicationEventKind.InterviewScheduled,
+            InterviewDate = date,
+            At = clock.GetUtcNow()
+        });
 
     private async Task<CandidateJobMatch?> FindMatchAsync(Guid userId, Guid jobId, CancellationToken ct) =>
         await db.Matches

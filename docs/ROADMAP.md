@@ -53,12 +53,16 @@ Leyenda: [x] hecho · [ ] pendiente
 - [ ] Entrega push real: requiere proyecto EAS + credenciales FCM + build de desarrollo (ver [NOTIFICATIONS.md](NOTIFICATIONS.md))
 - [ ] Hora de descanso y tope configurables por usuario (hoy son del servidor)
 
-## Fase 7 — Tracker
+## Fase 7 — Tracker ✅
 - [x] Fechas de entrevista con selector (días + horarios, sin módulo nativo), próxima entrevista en Inicio
 - [x] Avance de etapa en un toque con deshacer
 - [x] Métricas: embudo postulaciones → entrevistas → ofertas y tasa de respuesta
 - [x] Quitar la fecha de entrevista (`clearInterviewDate`)
-- [ ] Recordatorios de entrevista (la infraestructura de avisos ya existe; falta programarlos)
+- [x] Recordatorios de entrevista: el día antes (24 h–6 h) y poco antes (2 h), una sola vez por fecha, respetando el horario de descanso
+- [x] Seguimiento amable de postulaciones sin respuesta (7 días; uno por día; se rinde a los 30)
+- [x] Historial por postulación (etapas, fechas de entrevista) con endpoint y vista en la hoja de seguimiento
+- [ ] Recordatorio también por correo/calendario del teléfono (hoy solo avisos de la app)
+- [ ] Métricas de tiempos (días hasta la primera respuesta) usando el historial
 
 ## Fase 8 — Proveedores de IA
 - [ ] `IAiProvider`, router por tarea, límites diarios/mensuales, circuit breaker, `AiUsage`, dashboard de costos

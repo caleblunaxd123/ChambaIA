@@ -14,7 +14,7 @@ public class DeviceToken
     public DateTimeOffset? DisabledAt { get; set; }
 }
 
-public enum NotificationKind { NewJobs, Test }
+public enum NotificationKind { NewJobs, Test, InterviewDayBefore, InterviewSoon, FollowUp }
 
 /// <summary>
 /// Everything the agent told the user. It is the in-app inbox and, at the same time, the memory the anti-spam rules rely on
@@ -35,4 +35,8 @@ public class NotificationLog
     public int DevicesReached { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? ReadAt { get; set; }
+    /// <summary>For reminders: the tracker card the notice is about.</summary>
+    public Guid? ApplicationId { get; set; }
+    /// <summary>For interview reminders: the interview date it was sent for, so a rescheduled interview reminds again but never twice.</summary>
+    public DateTimeOffset? RemindFor { get; set; }
 }

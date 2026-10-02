@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using ChambaIA.Domain.Entities;
 using ChambaIA.Domain.Enums;
 
 namespace ChambaIA.Api.Contracts;
@@ -14,6 +15,14 @@ public sealed record ApplicationDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     JobSummaryDto? Job);
+
+public sealed record ApplicationEventDto(
+    Guid Id,
+    ApplicationEventKind Kind,
+    ApplicationStatus? FromStatus,
+    ApplicationStatus? ToStatus,
+    DateTimeOffset? InterviewDate,
+    DateTimeOffset At);
 
 public sealed class CreateApplicationRequest
 {

@@ -162,6 +162,16 @@ export const applicationSchema = z.object({
 });
 export type JobApplication = z.infer<typeof applicationSchema>;
 
+export const applicationEventSchema = z.object({
+  id: z.string(),
+  kind: z.enum(['statusChanged', 'interviewScheduled', 'interviewCleared']),
+  fromStatus: applicationStatus.nullable(),
+  toStatus: applicationStatus.nullable(),
+  interviewDate: z.string().nullable(),
+  at: z.string(),
+});
+export type ApplicationEvent = z.infer<typeof applicationEventSchema>;
+
 const skillRequirementSchema = z.object({ key: z.string(), name: z.string(), minLevel: skillLevel.nullable() });
 
 export const jobDetailResponseSchema = z.object({
@@ -253,7 +263,8 @@ export type JobSourceInfo = z.infer<typeof sourceSchema>;
 
 // ---------- notifications ----------
 
-export const notificationKind = z.enum(['newJobs', 'test']);
+export const notificationKind = z.enum(['newJobs', 'test', 'interviewDayBefore', 'interviewSoon', 'followUp']);
+export type NotificationKind = z.infer<typeof notificationKind>;
 
 export const notificationSchema = z.object({
   id: z.string(),

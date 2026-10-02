@@ -16,6 +16,22 @@ La decisión es pura y está probada (`Domain/Notifications/NotificationPolicy`)
 
 El texto es sobrio y no presiona: «Asistente Administrativa en Clínica Santa Aurora apareció hace 15 minutos. Encaja muy bien contigo.»
 
+## Recordatorios del tracker (Fase 7)
+
+`ReminderService` corre en el mismo `NotificationJob` (cada 5 min, antes del resumen de ofertas). Reglas puras y probadas en `Domain/Notifications/ReminderPolicy`:
+
+| Aviso | Cuándo | Una sola vez por… |
+|---|---|---|
+| `interviewDayBefore` | Entrevista entre 24 h y 6 h adelante | fecha de entrevista |
+| `interviewSoon` | Entrevista dentro de las próximas 2 h | fecha de entrevista |
+| `followUp` | Postulada hace ≥ 7 días (y ≤ 30) sin ningún cambio en la tarjeta, entre 9 y 20 h | postulación (y máx. 1 por usuario al día) |
+
+- Respetan el horario de descanso: si una entrevista es a las 8 a. m., el aviso «poco antes» sale a las 7 a. m. en lugar de despertarte.
+- Reprogramar la entrevista cambia la fecha de referencia: se vuelve a avisar para la nueva, nunca dos veces para la misma.
+- No cuentan contra el tope de 4 avisos/día de ofertas nuevas (son cosas que tú pediste al agendar), pero sí se desactivan con «Avisos en el celular» apagado.
+- Tarjetas descartadas o sin etapa nunca generan avisos. Al tocar el aviso se abre la oferta.
+- La hora que se muestra es la de Lima (`Push__UtcOffsetHours`), no la del servidor.
+
 ## Recálculo incremental
 
 Tras cada ingesta solo se evalúan las ofertas **nuevas o cambiadas** contra cada candidato (`MatchRecomputeService.RecomputeForJobsAsync`), no todo el catálogo. El recálculo completo sigue existiendo para cuando cambia el perfil o las preferencias.

@@ -13,6 +13,8 @@ public sealed class NotificationJob(IServiceScopeFactory scopes) : IJob
     public async Task Execute(IJobExecutionContext context)
     {
         await using var scope = scopes.CreateAsyncScope();
+        // Reminders first: an interview tomorrow matters more than a new offer, and neither blocks the other.
+        await scope.ServiceProvider.GetRequiredService<ReminderService>().RunAsync(context.CancellationToken);
         await scope.ServiceProvider.GetRequiredService<DigestService>().RunAsync(context.CancellationToken);
     }
 }

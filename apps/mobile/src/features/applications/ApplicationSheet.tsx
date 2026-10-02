@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 
+import { useApplicationHistory } from '@/api/queries';
 import type { ApplicationStatus, JobApplication } from '@/api/schemas';
 import { applicationStatusLabel, formatSalary } from '@/lib/format';
 import { haptics } from '@/lib/haptics';
@@ -10,8 +11,10 @@ import { Button } from '@/ui/Button';
 import { Chip } from '@/ui/Chip';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
 import { Input } from '@/ui/Input';
+import { Icon } from '@/ui/Icon';
 import { Text } from '@/ui/Text';
 
+import { describeEvent } from './history';
 import { InterviewPicker } from './InterviewPicker';
 import { APPLICATION_STAGES, stageStyle } from './stages';
 
@@ -46,6 +49,8 @@ export function ApplicationSheet({ application, saving, onClose, onSave, onRemov
 
   const job = application?.job;
   const salary = job ? formatSalary(job) : null;
+  const history = useApplicationHistory(application?.id);
+  const events = history.data ?? [];
 
   return (
     <>
@@ -100,6 +105,24 @@ export function ApplicationSheet({ application, saving, onClose, onSave, onRemov
         {status === 'interview' ? <InterviewPicker value={interview} onChange={setInterview} onClear={() => setInterview(null)} /> : null}
 
         <Input label="Notas" value={notes} onChangeText={setNotes} placeholder="Contacto, qué te preguntaron, pretensión salarial…" multiline numberOfLines={4} maxLength={2000} />
+
+        {events.length > 0 ? (
+          <View style={{ gap: 10 }} testID="application-history">
+            <Text variant="caption" tone="muted">Historial</Text>
+            {events.slice(0, 8).map((event) => {
+              const line = describeEvent(event);
+              return (
+                <View key={event.id} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+                  <View style={{ marginTop: 2 }}><Icon name={line.icon} size={16} tone="muted" /></View>
+                  <View style={{ flex: 1 }}>
+                    <Text>{line.text}</Text>
+                    <Text variant="caption" tone="subtle">{line.when}</Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
       </BottomSheet>
 
       <ConfirmDialog

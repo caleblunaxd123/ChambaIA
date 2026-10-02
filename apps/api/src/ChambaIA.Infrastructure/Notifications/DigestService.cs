@@ -113,22 +113,8 @@ public sealed class DigestService(
         return new TestNotificationResult(entry.Id, devices, accepted, push.IsEnabled);
     }
 
-    private async Task<(int Accepted, int Disabled)> PushAsync(Guid userId, NotificationLog entry, string type, CancellationToken ct)
-    {
-        if (!push.IsEnabled) return (0, 0);
-
-        var tokens = await db.DeviceTokens.Where(d => d.UserId == userId && d.DisabledAt == null).ToListAsync(ct);
-        if (tokens.Count == 0) return (0, 0);
-
-        var data = new Dictionary<string, object?> { ["type"] = type, ["notificationId"] = entry.Id, ["jobId"] = entry.JobId, ["tab"] = "new" };
-        var result = await push.SendAsync(tokens.Select(t => new PushMessage(t.Token, entry.Title, entry.Body, data)).ToList(), ct);
-
-        entry.DevicesReached = result.Accepted;
-        var now = clock.GetUtcNow();
-        foreach (var token in tokens.Where(t => result.InvalidTokens.Contains(t.Token))) token.DisabledAt = now;
-        await db.SaveChangesAsync(ct);
-        return (result.Accepted, result.InvalidTokens.Count);
-    }
+    private Task<(int Accepted, int Disabled)> PushAsync(Guid userId, NotificationLog entry, string type, CancellationToken ct) =>
+        PushDelivery.SendAsync(db, push, clock, userId, entry, type, ct);
 
     private PushPolicyOptions PolicyOptions()
     {

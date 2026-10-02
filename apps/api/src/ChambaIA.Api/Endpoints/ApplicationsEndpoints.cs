@@ -55,15 +55,30 @@ public static class ApplicationsEndpoints
                 var application = await db.Applications.Include(a => a.Job).SingleOrDefaultAsync(a => a.Id == id && a.UserId == userId, ct);
                 if (application is null) return Results.NotFound();
 
+                var previousDate = application.InterviewDate;
                 if (request.Notes is not null) application.Notes = request.Notes.Trim();
                 if (request.InterviewDate is not null) application.InterviewDate = request.InterviewDate;
                 if (request.ClearInterviewDate == true) application.InterviewDate = null;
+                if (application.InterviewDate != previousDate) tracker.RecordInterview(application, application.InterviewDate);
                 if (request.SalaryOffered is not null) application.SalaryOffered = request.SalaryOffered;
 
                 await tracker.ApplyStatusAsync(application, request.Status ?? application.Status, ct);
                 return Results.Ok(application.ToDto());
             })
             .Validate<PatchApplicationRequest>();
+
+        group.MapGet("/{id:guid}/history", async (Guid id, HttpContext http, AppDbContext db, CancellationToken ct) =>
+        {
+            var userId = http.User.GetUserId();
+            if (!await db.Applications.AnyAsync(a => a.Id == id && a.UserId == userId, ct)) return Results.NotFound();
+
+            var events = await db.ApplicationEvents.AsNoTracking()
+                .Where(e => e.ApplicationId == id)
+                .OrderByDescending(e => e.At)
+                .Take(100)
+                .ToListAsync(ct);
+            return Results.Ok(events.Select(e => new ApplicationEventDto(e.Id, e.Kind, e.FromStatus, e.ToStatus, e.InterviewDate, e.At)).ToList());
+        });
 
         group.MapDelete("/{id:guid}", async (Guid id, HttpContext http, AppDbContext db, CancellationToken ct) =>
         {

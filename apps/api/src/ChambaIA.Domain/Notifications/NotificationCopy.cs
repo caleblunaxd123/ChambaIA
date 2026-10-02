@@ -1,3 +1,5 @@
+using ChambaIA.Domain.Entities;
+
 namespace ChambaIA.Domain.Notifications;
 
 public sealed record NotificationMessage(string Title, string Body, Guid? JobId);
@@ -29,6 +31,40 @@ public static class NotificationCopy
 
     public static NotificationMessage Test() =>
         new("Tu agente está al tanto", "Así te avisaremos cuando aparezca algo que encaje contigo. Sin bombardearte.", null);
+
+    /// <summary>Interview reminders and the follow-up nudge. `localOffset` is the user's clock (Lima).</summary>
+    public static NotificationMessage Reminder(NotificationKind kind, ReminderCandidate card, DateTimeOffset? interview, DateTimeOffset now, TimeSpan localOffset)
+    {
+        var what = $"{card.Title} en {card.Company}";
+        switch (kind)
+        {
+            case NotificationKind.InterviewDayBefore:
+            {
+                var local = interview!.Value.ToOffset(localOffset);
+                var today = now.ToOffset(localOffset).Date;
+                var when = local.Date == today ? "Hoy" : local.Date == today.AddDays(1) ? "Mañana" : $"El {local:dd/MM}";
+                return new NotificationMessage(
+                    $"{when} tienes una entrevista",
+                    $"{what}, a las {local:HH:mm}. Repasa la oferta con calma y prepara dos ejemplos de tu experiencia.",
+                    card.JobId);
+            }
+            case NotificationKind.InterviewSoon:
+            {
+                var local = interview!.Value.ToOffset(localOffset);
+                var minutes = Math.Max(1, (int)Math.Round((interview.Value - now).TotalMinutes));
+                var left = minutes >= 90 ? "2 horas" : minutes >= 60 ? "1 hora" : $"{minutes} minutos";
+                return new NotificationMessage($"Tu entrevista es en {left}", $"{what}, a las {local:HH:mm}. Te deseamos mucho éxito.", card.JobId);
+            }
+            default:
+            {
+                var days = Math.Max(1, (int)(now - (card.AppliedAt ?? now)).TotalDays);
+                return new NotificationMessage(
+                    $"¿Novedades de {card.Company}?",
+                    $"Postulaste a {card.Title} hace {days} días. Si ya te respondieron, actualiza tu tablero; si no, puede ser buen momento para escribir un mensaje de seguimiento.",
+                    card.JobId);
+            }
+        }
+    }
 
     /// <summary>"hace 15 minutos", "hace 3 horas", "hoy", "ayer".</summary>
     public static string Ago(DateTimeOffset? postedAt, DateTimeOffset now)

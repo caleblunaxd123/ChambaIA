@@ -28,6 +28,7 @@ internal sealed class NotificationLogConfiguration : IEntityTypeConfiguration<No
         b.Property(n => n.Body).HasMaxLength(500);
         b.HasIndex(n => new { n.UserId, n.CreatedAt });
         b.HasIndex(n => new { n.UserId, n.Kind, n.CreatedAt });
+        b.HasIndex(n => n.ApplicationId);
         b.HasOne<ApplicationUser>().WithMany().HasForeignKey(n => n.UserId).OnDelete(DeleteBehavior.Cascade);
     }
 }

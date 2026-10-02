@@ -103,6 +103,7 @@ public static class DependencyInjection
             ? sp.GetRequiredService<ExpoPushSender>()
             : sp.GetRequiredService<NullPushSender>());
         services.AddScoped<DigestService>();
+        services.AddScoped<ReminderService>();
     }
 
     private static void AddIngestion(IServiceCollection services, IConfiguration config)

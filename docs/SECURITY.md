@@ -21,6 +21,7 @@
 | Privacidad del CV | El archivo no se expone por ninguna ruta; se analiza una vez; borrar CV/cuenta elimina fila **y** archivo; solo el texto necesario llegaría a un proveedor de IA (fase 8) |
 | Embeddings | Solo viaja el texto necesario (cargos, habilidades, experiencia; **nunca** nombre, correo ni contacto). Ollama **no tiene autenticación**: nunca se expone a internet; se usa en loopback, red privada/túnel o detrás de un proxy con TLS y token (`Embeddings__ApiKey`). Ver [OLLAMA.md](OLLAMA.md) |
 | Notificaciones | Los tokens de dispositivo se validan por formato, pertenecen a **una sola cuenta** (si el teléfono inicia sesión con otra, el token se mueve) y se borran al cerrar sesión o al eliminar la cuenta. El destino de un aviso tocado se valida (solo un GUID real abre una oferta). Límite de 3 avisos de prueba por hora y 4 avisos reales por día. Los avisos solo llevan cargo, empresa y hora. `Push__AccessToken` solo por variable de entorno |
+| Historial del tracker | `GET /applications/{id}/history` solo responde por tarjetas del propio usuario (otro usuario recibe 404) y se borra junto con la tarjeta o la cuenta (cascada). Solo guarda etapas y fechas; las notas nunca se copian al historial ni a los avisos |
 
 ## Pendiente (con fase)
 

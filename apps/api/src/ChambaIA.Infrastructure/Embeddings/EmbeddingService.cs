@@ -123,7 +123,7 @@ public sealed class EmbeddingService(
     {
         if (!provider.IsEnabled) return 0;
 
-        var profiles = await db.CandidateProfiles.Where(p => p.ProfileEmbedding == null).Take(max).ToListAsync(ct);
+        var profiles = await db.CandidateProfiles.Where(p => p.ProfileEmbedding == null).OrderBy(p => p.UpdatedAt).Take(max).ToListAsync(ct);
         var done = 0;
         foreach (var profile in profiles)
         {

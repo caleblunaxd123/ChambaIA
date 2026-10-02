@@ -5,7 +5,7 @@ import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotificationSu
 import type { AppNotification } from '@/api/schemas';
 import { jobsLink } from '@/features/jobs/links';
 import { openSystemSettings, syncPush } from '@/features/notifications/push-service';
-import { describePushStatus, testResultMessage } from '@/features/notifications/push';
+import { describePushStatus, noticeVisual, testResultMessage } from '@/features/notifications/push';
 import { formatRelativeTime } from '@/lib/format';
 import { haptics } from '@/lib/haptics';
 import { usePushStore } from '@/state/push-store';
@@ -72,10 +72,12 @@ export default function NotificationsScreen() {
 function NotificationRow({ notification: n, onPress }: { notification: AppNotification; onPress: () => void }) {
   const { colors } = useTheme();
   const unread = n.readAt === null;
+  const visual = noticeVisual(n.kind);
+  const tint = { success: colors.successTint, accent: colors.accentTint, info: colors.infoTint, primary: colors.primaryTint }[visual.tone];
   return (
     <Card onPress={onPress} testID="notification-row" accessibilityLabel={`${unread ? 'Sin leer. ' : ''}${n.title}. ${n.body}`} style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
-      <View style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: n.kind === 'newJobs' ? colors.successTint : colors.primaryTint, alignItems: 'center', justifyContent: 'center' }}>
-        <Icon name={n.kind === 'newJobs' ? 'sparkles' : 'notifications'} size={20} tone={n.kind === 'newJobs' ? 'success' : 'primary'} />
+      <View style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: tint, alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name={visual.icon} size={20} tone={visual.tone} />
       </View>
       <View style={{ flex: 1, gap: 2 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>

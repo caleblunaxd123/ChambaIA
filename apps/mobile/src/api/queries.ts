@@ -61,6 +61,11 @@ export function useApplications() {
   return useQuery({ queryKey: keys.applications, queryFn: api.applications.list });
 }
 
+/** The story of one tracker card. Loaded only while its sheet is open. */
+export function useApplicationHistory(id: string | undefined) {
+  return useQuery({ queryKey: ['applications', id, 'history'], queryFn: () => api.applications.history(id!), enabled: id !== undefined });
+}
+
 export function useProfile(enabled = true) {
   return useQuery({ queryKey: keys.profile, queryFn: api.profile.get, enabled });
 }

@@ -11,6 +11,7 @@ import {
   resumeDetailSchema,
   sourceSchema,
   resumeSchema,
+  applicationEventSchema,
   applicationSchema,
   authResponseSchema,
   feedItemSchema,
@@ -103,6 +104,7 @@ export const api = {
     patch: (id: string, input: ApplicationPatch) =>
       request(`/applications/${id}`, { method: 'PATCH', body: input, schema: applicationSchema }),
     remove: (id: string) => request(`/applications/${id}`, { method: 'DELETE' }),
+    history: (id: string) => request(`/applications/${id}/history`, { schema: z.array(applicationEventSchema) }),
   },
 
   sources: {
