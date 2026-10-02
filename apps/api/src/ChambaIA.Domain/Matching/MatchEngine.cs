@@ -5,20 +5,24 @@ namespace ChambaIA.Domain.Matching;
 
 /// <summary>
 /// Deterministic matching (stages A and B of the pipeline). Pure and free: no I/O, no AI, no tokens.
-/// Semantic similarity (stage C, embeddings) is layered on top in phase 4 and only re-ranks what survives here.
+/// Semantic similarity (stage C, embeddings) is optional: when a score is supplied it takes a share of the weights and can
+/// soften the role-title cap; when it is not (no embeddings yet, provider down) the result is exactly the deterministic one.
 /// </summary>
 public static class MatchEngine
 {
-    // Weights sum to 1. Phase 4 will carve a semantic share out of the skills/role weights.
-    private const double RulesWeight = 0.25;
-    private const double SkillsWeight = 0.30;
-    private const double RoleWeight = 0.25;
-    private const double ExperienceWeight = 0.15;
-    private const double EducationWeight = 0.05;
+    // Each set of weights sums to 1. With a semantic score, it takes 25% (mostly from title/role and skills).
+    private static readonly Weights Plain = new(Rules: 0.25, Skills: 0.30, Role: 0.25, Experience: 0.15, Education: 0.05, Semantic: 0);
+    private static readonly Weights WithSemantic = new(Rules: 0.20, Skills: 0.25, Role: 0.15, Experience: 0.10, Education: 0.05, Semantic: 0.25);
+
+    /// <summary>A strong semantic match above this score is a reason worth telling the user about.</summary>
+    private const double SemanticReasonThreshold = 70;
+
+    private sealed record Weights(double Rules, double Skills, double Role, double Experience, double Education, double Semantic);
 
     private const double HardFilteredCap = 25;
 
-    public static MatchOutcome Evaluate(CandidateProfile profile, JobPreferences prefs, JobOffer job)
+    /// <param name="semanticScore">0-100 from <see cref="SemanticSimilarity"/>, or null when embeddings are not available.</param>
+    public static MatchOutcome Evaluate(CandidateProfile profile, JobPreferences prefs, JobOffer job, double? semanticScore = null)
     {
         var rules = RulesEvaluator.Evaluate(profile, prefs, job);
         var skills = SkillsEvaluator.Evaluate(profile, job);
@@ -26,17 +30,23 @@ public static class MatchEngine
         var experience = RulesEvaluator.ExperienceScore(profile, job);
         var education = RulesEvaluator.EducationScore(profile, job);
 
+        var w = semanticScore is null ? Plain : WithSemantic;
         var overall =
-            RulesWeight * rules.Score +
-            SkillsWeight * skills.Score +
-            RoleWeight * role.Score +
-            ExperienceWeight * experience +
-            EducationWeight * education;
+            w.Rules * rules.Score +
+            w.Skills * skills.Score +
+            w.Role * role.Score +
+            w.Experience * experience +
+            w.Education * education +
+            w.Semantic * (semanticScore ?? 0);
+
+        // A title that reads differently but means the same ("Auxiliar de oficina" vs "Asistente administrativo") should not be
+        // punished as an unrelated role: the semantic score stands in for the literal title overlap, discounted.
+        var effectiveRole = semanticScore is { } sem ? Math.Max(role.Score, sem * 0.85) : role.Score;
 
         var hardFiltered = rules.HardFailures.Count > 0;
         var category = hardFiltered
             ? MatchCategory.Poor
-            : Cap(Categorize(overall), skills.Missing.Count, GapCount(skills, rules), role.Score);
+            : Cap(Categorize(overall), skills.Missing.Count, GapCount(skills, rules), effectiveRole);
 
         // Keep the score consistent with the (possibly capped) category so sorting by score never contradicts the label.
         overall = Math.Min(overall, hardFiltered ? HardFilteredCap : Ceiling(category));
@@ -44,6 +54,8 @@ public static class MatchEngine
         var reasons = new List<MatchNote>();
         if (role.BestRole is not null && role.Score >= 70)
             reasons.Add(new MatchNote("role-match", "Coincide con un cargo que buscas", role.BestRole));
+        if (semanticScore is >= SemanticReasonThreshold && role.Score < 70)
+            reasons.Add(new MatchNote("semantic-match", "El contenido de la oferta se parece mucho a tu experiencia"));
         reasons.AddRange(skills.Reasons);
         reasons.AddRange(rules.Reasons);
 
@@ -59,6 +71,7 @@ public static class MatchEngine
             SkillsScore = Round(skills.Score),
             RoleScore = Round(role.Score),
             ExperienceScore = Round(experience),
+            SemanticScore = semanticScore is { } sc ? Round(sc) : null,
             OverallScore = Round(overall),
             Category = category,
             IsHardFiltered = hardFiltered,

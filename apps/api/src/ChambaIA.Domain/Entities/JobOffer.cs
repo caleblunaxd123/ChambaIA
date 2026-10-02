@@ -60,6 +60,8 @@ public class JobOffer
 
     public string ContentHash { get; set; } = "";
     public Vector? Embedding { get; set; }
+    /// <summary>Hash of the text (and model) the embedding was made from. A mismatch means it is stale and must be redone.</summary>
+    public string? EmbeddingHash { get; set; }
 }
 
 public class SkillRequirement

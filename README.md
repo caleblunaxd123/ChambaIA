@@ -7,7 +7,7 @@ duplicados y trabajos incompatibles, calcula qué tan bien encajas, te explica p
 > barato; los modelos de pago se reservan para acciones premium. Todo funciona aunque las APIs de IA estén caídas.
 > Ver [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) y [docs/AI-COSTS.md](docs/AI-COSTS.md).
 
-Estado: **Fases 1 y 2 completas** (base ejecutable + CV, perfil y onboarding) **+ renovación de UX/diseño** (modo oscuro, deshacer, tablero con fechas de entrevista). Ver [docs/ROADMAP.md](docs/ROADMAP.md).
+Estado: **Fases 1 a 4 completas** (base ejecutable, CV y onboarding, ingesta con deduplicación y embeddings con Ollama) **+ renovación de UX/diseño** (modo oscuro, deshacer, tablero con fechas de entrevista). Ver [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Estructura
 
@@ -106,7 +106,7 @@ docker compose --profile full up -d --build
 
 ```bash
 dotnet build ChambaIA.sln            # 0 errores, 0 advertencias (TreatWarningsAsErrors)
-dotnet test ChambaIA.sln             # 192 pruebas (dominio + integración); las de integración levantan PostgreSQL con Testcontainers (requiere Docker)
+dotnet test ChambaIA.sln             # 224 pruebas (dominio + integración); las de integración levantan PostgreSQL con Testcontainers (requiere Docker)
 cd apps/mobile
 npm run typecheck && npm run lint && npm test
 ```
@@ -129,7 +129,14 @@ npm run typecheck && npm run lint && npm test
 - **Perfil**: CV actual (reemplazar / eliminar), borrar historial y eliminar cuenta (borra también los archivos de CV).
 - Plan FREE/PRO: 1 CV (subir otro reemplaza y borra el anterior del disco); PRO+: hasta 5.
 
-Lo que **todavía no** existe (ver roadmap): conectores a portales reales (fase 10, requiere revisar términos de cada uno), embeddings, notificaciones push, enriquecimiento con LLM barato (fase 8), OCR de CV escaneados, preparación de postulación.
+## Qué incluye la Fase 4 (embeddings)
+
+- **Etapa C del pipeline**: cada oferta y cada candidato tienen un vector de 1024 dimensiones (`bge-m3` vía **Ollama**, local o en tu servidor); **pgvector** calcula la similitud dentro de PostgreSQL con índice HNSW.
+- Aporta el 25% del puntaje y reconoce cargos equivalentes con otro nombre; **no** salta reglas duras ni requisitos faltantes.
+- **Opcional y resiliente**: `Embeddings__Provider=None` (por defecto) = el producto funciona igual; si Ollama cae, un circuit breaker evita martillarlo y el worker completa los vectores cuando vuelve.
+- Guía de instalación (PC, Docker y servidor Contabo), seguridad y calibración: [docs/OLLAMA.md](docs/OLLAMA.md).
+
+Lo que **todavía no** existe (ver roadmap): conectores a portales reales (fase 10, requiere revisar términos de cada uno), notificaciones push, enriquecimiento con LLM barato (fase 8), OCR de CV escaneados, preparación de postulación.
 
 ## Renovación de UX y diseño
 
@@ -161,7 +168,7 @@ Lo que **todavía no** existe (ver roadmap): conectores a portales reales (fase 
 
 ## CI
 
-`.github/workflows/ci.yml`: en cada PR y en `main` compila (.NET, advertencias = errores), corre las 192 pruebas (con
+`.github/workflows/ci.yml`: en cada PR y en `main` compila (.NET, advertencias = errores), corre las 224 pruebas (con
 PostgreSQL real vía Testcontainers) y, para la app, `typecheck`, `lint` y `jest`.
 
 ## Datos demo

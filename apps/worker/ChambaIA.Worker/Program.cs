@@ -31,6 +31,14 @@ builder.Services.AddQuartz(q =>
         .WithCronSchedule(builder.Configuration.GetValue("Worker:IngestionCron", "0 0/30 * * * ?")));
     // Also once shortly after start, so a fresh deploy does not wait half an hour for its first offers.
     q.AddTrigger(t => t.ForJob(ingestion).WithIdentity($"{nameof(IngestionJob)}-startup").StartAt(DateBuilder.FutureDate(15, IntervalUnit.Second)));
+
+    // Catch-up for vectors: offers ingested or profiles saved while the embedding server was down get them here.
+    var embeddings = new JobKey(nameof(EmbeddingJob));
+    q.AddJob<EmbeddingJob>(o => o.WithIdentity(embeddings).DisallowConcurrentExecution());
+    q.AddTrigger(t => t
+        .ForJob(embeddings)
+        .WithIdentity($"{nameof(EmbeddingJob)}-trigger")
+        .WithCronSchedule(builder.Configuration.GetValue("Worker:EmbeddingCron", "0 0/10 * * * ?")));
 });
 builder.Services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
 

@@ -9,7 +9,7 @@ using Testcontainers.PostgreSql;
 namespace ChambaIA.Tests.Api;
 
 /// <summary>Boots the real API against a throwaway PostgreSQL (pgvector) container. Shared by all integration tests.</summary>
-public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
+public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public const string DemoEmail = "areli.demo@chambaia.dev";
     public const string DemoPassword = "Demo12345-tests";
@@ -44,7 +44,11 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("RateLimiting:UploadsPerMinute", "10000");
         builder.UseSetting("RateLimiting:AuthPerMinute", "10000");
         builder.UseSetting("RateLimiting:GlobalPerMinute", "100000");
+        ConfigureExtra(builder);
     }
+
+    /// <summary>Hook for factories that need extra settings or service replacements.</summary>
+    protected virtual void ConfigureExtra(IWebHostBuilder builder) { }
 
     /// <summary>Registers a brand new user and returns an authenticated client for it.</summary>
     public async Task<(HttpClient Client, AuthBody Auth)> NewUserAsync(string? name = null)

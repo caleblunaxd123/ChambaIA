@@ -13,7 +13,7 @@ FUENTES → INGESTA → NORMALIZACIÓN → DEDUPLICACIÓN → FILTROS DETERMINÍ
 | Lectura de CV (PDF/DOCX) y parser determinista | 2 | ✅ `Domain/Resumes` + `Infrastructure/Resumes` |
 | Filtros duros + matching estructural (A y B) | 1 | ✅ `MatchEngine` |
 | Fuentes, normalización, dedup en 3 capas, retiro | 3 | ✅ `Domain/Ingestion` + `Infrastructure/Ingestion` + `IngestionJob` |
-| Embeddings + pgvector (C) | 4 | pendiente (columnas `vector(1024)` ya existen) |
+| Embeddings locales (Ollama + bge-m3) + pgvector HNSW (C) | 4 | ✅ `Infrastructure/Embeddings` · ver [OLLAMA.md](OLLAMA.md) |
 | Push / workers | 6 | pendiente (Worker + Quartz ya corren la ingesta) |
 | Proveedores de IA + router + límites | 8 | pendiente (tabla `AiUsage` lista) |
 

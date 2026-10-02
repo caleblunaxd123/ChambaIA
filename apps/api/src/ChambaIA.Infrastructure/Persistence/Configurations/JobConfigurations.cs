@@ -42,6 +42,7 @@ internal sealed class JobOfferConfiguration : IEntityTypeConfiguration<JobOffer>
         b.Property(j => j.SalaryMin).HasPrecision(12, 2);
         b.Property(j => j.SalaryMax).HasPrecision(12, 2);
         b.Property(j => j.Embedding).HasColumnType("vector(1024)");
+        b.Property(j => j.EmbeddingHash).HasMaxLength(64);
 
         b.OwnsMany(j => j.SkillsRequired, o => o.ToJson());
         b.OwnsMany(j => j.SkillsPreferred, o => o.ToJson());
@@ -52,7 +53,8 @@ internal sealed class JobOfferConfiguration : IEntityTypeConfiguration<JobOffer>
         b.HasIndex(j => j.ContentHash);
         b.HasIndex(j => new { j.NormalizedCompany, j.NormalizedTitle });
         b.HasIndex(j => j.DuplicateOfId);
-        // Vector (HNSW) index is created in phase 4, once embeddings are actually populated.
+        // Approximate nearest-neighbour search by cosine distance (bge-m3 embeddings are compared by angle).
+        b.HasIndex(j => j.Embedding).HasMethod("hnsw").HasOperators("vector_cosine_ops").HasStorageParameter("m", 16).HasStorageParameter("ef_construction", 64);
     }
 }
 

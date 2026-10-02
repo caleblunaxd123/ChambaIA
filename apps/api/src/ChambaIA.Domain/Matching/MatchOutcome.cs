@@ -10,6 +10,8 @@ public sealed class MatchOutcome
     public double SkillsScore { get; init; }
     public double RoleScore { get; init; }
     public double ExperienceScore { get; init; }
+    /// <summary>Null when no embeddings were available for this pair.</summary>
+    public double? SemanticScore { get; init; }
     public double OverallScore { get; init; }
     public MatchCategory Category { get; init; }
     /// <summary>True when a hard rule failed: the offer conflicts with something the candidate asked to avoid.</summary>

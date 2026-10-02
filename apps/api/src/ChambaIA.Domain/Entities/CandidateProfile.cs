@@ -26,6 +26,8 @@ public class CandidateProfile
 
     /// <summary>Filled by the embedding stage (phase 4). Dimension matches the configured model (bge-m3 = 1024).</summary>
     public Vector? ProfileEmbedding { get; set; }
+    /// <summary>Hash of the profile text (and model) behind <see cref="ProfileEmbedding"/>.</summary>
+    public string? EmbeddingHash { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;

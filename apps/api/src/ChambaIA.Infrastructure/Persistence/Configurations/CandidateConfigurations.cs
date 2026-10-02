@@ -16,6 +16,7 @@ internal sealed class CandidateProfileConfiguration : IEntityTypeConfiguration<C
         b.Property(p => p.Headline).HasMaxLength(200);
         b.Property(p => p.Certifications).HasColumnType("text[]");
         b.Property(p => p.ProfileEmbedding).HasColumnType("vector(1024)");
+        b.Property(p => p.EmbeddingHash).HasMaxLength(64);
 
         b.OwnsMany(p => p.Skills, o => o.ToJson());
         b.OwnsMany(p => p.Languages, o => o.ToJson());

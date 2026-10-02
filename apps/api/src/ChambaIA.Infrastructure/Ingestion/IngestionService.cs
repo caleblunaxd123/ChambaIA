@@ -1,5 +1,6 @@
 using ChambaIA.Domain.Entities;
 using ChambaIA.Domain.Ingestion;
+using ChambaIA.Infrastructure.Embeddings;
 using ChambaIA.Infrastructure.Matching;
 using ChambaIA.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -39,6 +40,7 @@ public sealed class IngestionService(
     AppDbContext db,
     IEnumerable<IJobSource> sources,
     MatchRecomputeService matcher,
+    EmbeddingService embeddings,
     IOptions<IngestionOptions> options,
     TimeProvider clock,
     ILogger<IngestionService> logger)
@@ -61,9 +63,12 @@ public sealed class IngestionService(
 
         var deactivated = await DeactivateStaleAsync(healthy, ct);
 
+        // Stage C: give new/changed offers their vector before anyone is matched. No-op when embeddings are off or the server is down.
+        await embeddings.EmbedPendingJobsAsync(ct: ct);
+
         var users = 0;
         if (recompute && (reports.Sum(r => r.Created + r.Updated) > 0 || deactivated > 0))
-            users = await RecomputeAllAsync(ct);
+            users = await matcher.RecomputeAllAsync(ct);
 
         var result = new IngestionReport(reports, deactivated, users);
         logger.LogInformation(

@@ -39,6 +39,32 @@ services:
       timeout: 3s
       retries: 10
 
+  # Embeddings locales (fase 4). Opcional:  docker compose --profile ai up -d
+  # El modelo se descarga una sola vez (~1.2 GB) en el volumen chambaia_ollama.
+  ollama:
+    profiles: ["ai"]
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${OLLAMA_PORT:-11434}:11434"   # solo loopback: Ollama no tiene autenticación
+    volumes:
+      - chambaia_ollama:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  ollama-pull:
+    profiles: ["ai"]
+    image: ollama/ollama:latest
+    depends_on:
+      ollama: { condition: service_healthy }
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["ollama", "pull", "${EMBEDDING_MODEL:-bge-m3}"]
+    restart: "no"
+
   api:
     profiles: ["full"]
     build:
@@ -73,3 +99,4 @@ services:
 volumes:
   chambaia_pg:
   chambaia_redis:
+  chambaia_ollama:

@@ -1,4 +1,6 @@
 using ChambaIA.Infrastructure.Auth;
+using ChambaIA.Infrastructure.Embeddings;
+using Microsoft.Extensions.Options;
 using ChambaIA.Infrastructure.Identity;
 using ChambaIA.Infrastructure.Ingestion;
 using ChambaIA.Infrastructure.Matching;
@@ -41,6 +43,7 @@ public static class DependencyInjection
                 o.InstanceName = "chambaia:";
             });
 
+        AddEmbeddings(services, config);
         services.AddScoped<MatchRecomputeService>();
         services.AddScoped<TrackerService>();
 
@@ -60,6 +63,28 @@ public static class DependencyInjection
     /// Sources are registered from configuration (Ingestion:IncludeDemo, Ingestion:Feeds). Feed connectors are singletons
     /// so their ETag cache survives between runs; the service itself is scoped (it owns a DbContext).
     /// </summary>
+    /// <summary>
+    /// Stage C of the pipeline. With Embeddings:Provider = None (the default) the product runs exactly as before; with Ollama
+    /// each offer and each candidate gets a 1024-dimension vector that pgvector compares inside PostgreSQL.
+    /// </summary>
+    private static void AddEmbeddings(IServiceCollection services, IConfiguration config)
+    {
+        services.Configure<EmbeddingOptions>(config.GetSection(EmbeddingOptions.Section));
+        services.AddSingleton<EmbeddingCircuit>();
+        services.AddTransient<NullEmbeddingProvider>();
+        services.AddHttpClient<OllamaEmbeddingProvider>((sp, client) =>
+        {
+            var o = sp.GetRequiredService<IOptions<EmbeddingOptions>>().Value;
+            client.BaseAddress = new Uri(o.BaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(Math.Max(5, o.TimeoutSeconds));
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("ChambaIA-Embeddings/1.0");
+        });
+        services.AddScoped<IEmbeddingProvider>(sp => sp.GetRequiredService<IOptions<EmbeddingOptions>>().Value.Enabled
+            ? sp.GetRequiredService<OllamaEmbeddingProvider>()
+            : sp.GetRequiredService<NullEmbeddingProvider>());
+        services.AddScoped<EmbeddingService>();
+    }
+
     private static void AddIngestion(IServiceCollection services, IConfiguration config)
     {
         services.Configure<IngestionOptions>(config.GetSection(IngestionOptions.Section));

@@ -14,6 +14,7 @@ como runtime del SaaS. El runtime gasta tokens solo donde una regla o un modelo 
 | Explicaciones «¿por qué encaja?» | plantillas a partir de los datos del match |
 | Comandos del agente | `AgentCommandParser` (regex sobre texto normalizado) |
 | Búsqueda y orden del feed | SQL |
+| Embeddings y similitud semántica (fase 4) | Ollama + `bge-m3` en tu hardware, comparación con pgvector: **S/ 0 por llamada** |
 
 ## Enrutado por tarea (diseño de la fase 8)
 

@@ -29,8 +29,12 @@ Leyenda: [x] hecho · [ ] pendiente
 - [x] `GET /sources` (transparencia) y hoja «¿De dónde salen las ofertas?» en la app
 - [ ] Recálculo incremental (solo ofertas nuevas × usuarios) cuando el volumen lo pida
 
-## Fase 4 — Embeddings y matching vectorial
-- [ ] Servicio local de embeddings (Ollama + bge-m3 / multilingual-e5), índice HNSW, etapa C
+## Fase 4 — Embeddings y matching vectorial ✅
+- [x] `IEmbeddingProvider` (Ollama + proveedor nulo), timeout, reintento, circuit breaker, validación de dimensiones
+- [x] `EmbeddingService`: vectores de ofertas y perfiles solo cuando cambia su texto (hash), catch-up en el worker
+- [x] Etapa C en `MatchEngine` (25% del puntaje; nunca salta reglas duras ni requisitos faltantes); similitud con pgvector + índice HNSW
+- [x] Modo sin embeddings idéntico al anterior; calibración medida con bge-m3 real (`infra/scripts/calibrate-embeddings.mjs`)
+- [ ] Calibrar con ofertas reales etiquetadas; métricas de latencia/errores del servidor de embeddings
 
 ## Fase 5 — Feed y explicación
 - [ ] Refinar feed con ranking semántico; explicación enriquecida

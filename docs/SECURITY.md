@@ -19,6 +19,7 @@
 | Eliminación | `POST /account/delete` con contraseña: borra perfil, preferencias, matches, postulaciones, CVs, tokens y `AiUsage` |
 | Subida de CV | Extensión + MIME + **firma real** (`%PDF-` / ZIP con `word/document.xml`), máx. 5 MB, rechazo de zip bombs (>30 MB descomprimidos), nombre en disco aleatorio (GUID), nombre visible saneado, política de rate limit `upload`, almacenamiento fuera de carpetas servidas, errores de lectura nunca son 500 |
 | Privacidad del CV | El archivo no se expone por ninguna ruta; se analiza una vez; borrar CV/cuenta elimina fila **y** archivo; solo el texto necesario llegaría a un proveedor de IA (fase 8) |
+| Embeddings | Solo viaja el texto necesario (cargos, habilidades, experiencia; **nunca** nombre, correo ni contacto). Ollama **no tiene autenticación**: nunca se expone a internet; se usa en loopback, red privada/túnel o detrás de un proxy con TLS y token (`Embeddings__ApiKey`). Ver [OLLAMA.md](OLLAMA.md) |
 
 ## Pendiente (con fase)
 
