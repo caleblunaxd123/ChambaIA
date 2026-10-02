@@ -13,7 +13,7 @@ Estado: **Fases 1 y 2 completas** (base ejecutable + CV, perfil y onboarding) **
 
 ```
 apps/api       ASP.NET Core 9 (Web API, Identity + JWT, EF Core, Swagger) + Domain + Infrastructure + tests
-apps/worker    .NET Worker Service con Quartz.NET (heartbeat hoy; ingesta y alertas en fases 3 y 6)
+apps/worker    .NET Worker Service con Quartz.NET: ingesta de ofertas cada 30 min (fase 3) + heartbeat; alertas en fase 6
 apps/mobile    Expo SDK 57 · React Native · TypeScript · Expo Router · TanStack Query · Zustand · RHF + Zod
 infra/docker   Dockerfiles de API y Worker
 docs/          Producto, arquitectura, roadmap, costos de IA, fuentes, seguridad
@@ -74,11 +74,26 @@ La app descubre la API sola:
 Copia `apps/mobile/.env.example` a `.env` para activar el botón dev **«Entrar con la cuenta demo»**.
 Si Windows pregunta por el firewall, permite `dotnet` en redes privadas para que el teléfono llegue a la API.
 
-### 4. Worker (opcional en esta fase)
+### 4. Worker (ingesta de ofertas)
 
 ```bash
 DOTNET_ENVIRONMENT=Development dotnet run --project apps/worker/ChambaIA.Worker
 ```
+
+Corre la **ingesta** al arrancar (a los 15 s) y luego cada 30 minutos (`Worker:IngestionCron`): todas las fuentes →
+normalización → deduplicación → retiro de ofertas vencidas → recálculo de matches. En Development incluye las ofertas
+demo (`Ingestion:IncludeDemo`). Para conectar un feed JSON (formato en [docs/JOB-SOURCES.md](docs/JOB-SOURCES.md)):
+
+```bash
+Ingestion__Feeds__0__Key=clinica-x \
+Ingestion__Feeds__0__Name="Clínica X" \
+Ingestion__Feeds__0__Url=https://empleos.clinica-x.pe/feed.json \
+Ingestion__Feeds__0__Permission="Convenio firmado 2026-10-01" \
+DOTNET_ENVIRONMENT=Development dotnet run --project apps/worker/ChambaIA.Worker
+```
+
+Un feed **sin `Permission`** no se lee (la fuente queda marcada con error). En Development también puedes forzar una
+corrida desde Swagger: `POST /api/v1/sources/ingest`.
 
 ### Todo en contenedores (opcional)
 
@@ -91,7 +106,7 @@ docker compose --profile full up -d --build
 
 ```bash
 dotnet build ChambaIA.sln            # 0 errores, 0 advertencias (TreatWarningsAsErrors)
-dotnet test ChambaIA.sln             # 151 pruebas (dominio + integración); las de integración levantan PostgreSQL con Testcontainers (requiere Docker)
+dotnet test ChambaIA.sln             # 192 pruebas (dominio + integración); las de integración levantan PostgreSQL con Testcontainers (requiere Docker)
 cd apps/mobile
 npm run typecheck && npm run lint && npm test
 ```
@@ -114,7 +129,7 @@ npm run typecheck && npm run lint && npm test
 - **Perfil**: CV actual (reemplazar / eliminar), borrar historial y eliminar cuenta (borra también los archivos de CV).
 - Plan FREE/PRO: 1 CV (subir otro reemplaza y borra el anterior del disco); PRO+: hasta 5.
 
-Lo que **todavía no** existe (ver roadmap): enriquecimiento con LLM barato (opcional, fase 8), OCR de CV escaneados, ingesta real de ofertas, embeddings, notificaciones push, abstracción de proveedores de IA, preparación de postulación.
+Lo que **todavía no** existe (ver roadmap): conectores a portales reales (fase 10, requiere revisar términos de cada uno), embeddings, notificaciones push, enriquecimiento con LLM barato (fase 8), OCR de CV escaneados, preparación de postulación.
 
 ## Renovación de UX y diseño
 
@@ -128,6 +143,26 @@ Lo que **todavía no** existe (ver roadmap): enriquecimiento con LLM barato (opc
 - **Agente**: chat a pantalla completa, cada respuesta muestra qué cambió en tu búsqueda, memoria en una hoja («Recuerdo N»), sugerencias que desaparecen al usarse.
 - **Formularios**: aviso de cambios sin guardar al cerrar, botón deshabilitado si no hay cambios, errores en línea consistentes, anillo de foco.
 - Correcciones: botones anidados dentro de botones (HTML inválido en web), etiquetas de la barra inferior cortadas, campo de años/meses que borraba la letra «D» en vez de no-dígitos, títulos de error en inglés («Not Found»), saneado de nombres de CV con rutas de Windows en servidores Linux.
+
+## Ingesta de ofertas (Fase 3)
+
+- **Contrato** `IJobSource` → `RawJob`; cada conector solo trae y traduce. Normalización, dedup y almacenamiento son comunes.
+- **Normalizador determinista** (`Domain/Ingestion/JobNormalizer`): limpia HTML, deduce distrito (ubicación o título),
+  modalidad, tipo de contrato, sueldo («S/ 1,800 - 2,200», «2500 soles»; en descripciones exige moneda para no leer años
+  ni teléfonos), experiencia («2 años de experiencia», «sin experiencia»), estudios mínimos, «lunes a viernes» y
+  habilidades del catálogo con nivel («Excel intermedio»), separando las «deseables». Lo estructurado de la fuente siempre gana.
+- **Deduplicación en 3 capas**: `(fuente, id externo)` → hash de contenido → similitud (misma empresa, título ≈, mismo
+  distrito, sueldos compatibles, ≤ 21 días). Los duplicados se guardan inactivos con `DuplicateOfId`: nunca se muestran dos veces.
+- **Retiro**: ofertas vencidas o que una fuente sana dejó de listar hace `StaleAfterDays` (7) días.
+- **Robustez**: una fuente caída o un lote que no se puede guardar no detiene a las demás; el error queda en `JobSource.LastError`.
+- **Transparencia**: `GET /api/v1/sources` y, en la app, Perfil → «¿De dónde salen las ofertas?».
+- Fuentes incluidas: demo (a través del pipeline real) y **feeds JSON** (`JsonFeedSource`, con ETag y User-Agent identificable).
+  Ejemplo de feed: [docs/examples/feed-ejemplo.json](docs/examples/feed-ejemplo.json).
+
+## CI
+
+`.github/workflows/ci.yml`: en cada PR y en `main` compila (.NET, advertencias = errores), corre las 192 pruebas (con
+PostgreSQL real vía Testcontainers) y, para la app, `typecheck`, `lint` y `jest`.
 
 ## Datos demo
 

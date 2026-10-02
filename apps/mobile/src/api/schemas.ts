@@ -230,3 +230,17 @@ export type DetectedResume = z.infer<typeof detectedResumeSchema>;
 
 export const resumeDetailSchema = z.object({ resume: resumeSchema, detected: detectedResumeSchema.nullable() });
 export type ResumeDetail = z.infer<typeof resumeDetailSchema>;
+
+// ---------- sources ----------
+
+export const jobSourceKind = z.enum(['demo', 'api', 'feed', 'careerPage', 'manual']);
+
+export const sourceSchema = z.object({
+  key: z.string(),
+  name: z.string(),
+  kind: jobSourceKind,
+  lastFetchedAt: z.string().nullable(),
+  activeOffers: z.number(),
+  healthy: z.boolean(),
+});
+export type JobSourceInfo = z.infer<typeof sourceSchema>;

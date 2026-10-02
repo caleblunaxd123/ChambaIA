@@ -2,7 +2,7 @@ import { type InfiniteData, type QueryClient, keepPreviousData, useInfiniteQuery
 
 import { useAuthStore } from '@/state/auth-store';
 
-import { type FeedFilters, type FeedTab, type PreferencesInput, type ProfileInput, api } from './endpoints';
+import { type ApplicationPatch, type FeedFilters, type FeedTab, type PreferencesInput, type ProfileInput, api } from './endpoints';
 import type { ApplicationStatus, FeedPage, MatchStatus } from './schemas';
 
 /** One place for cache keys so invalidation can never drift from the queries. */
@@ -43,6 +43,11 @@ export function useDistricts() {
 
 export function useSkillCatalog() {
   return useQuery({ queryKey: ['catalog', 'skills'], queryFn: api.catalog.skills, staleTime: Infinity });
+}
+
+/** Where offers come from. Changes only when ingestion runs, so a few minutes of staleness is fine. */
+export function useSources() {
+  return useQuery({ queryKey: ['sources'], queryFn: api.sources.list, staleTime: 5 * 60_000 });
 }
 
 export function useApplications() {
@@ -147,8 +152,7 @@ export function useCreateApplication() {
 export function usePatchApplication() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...patch }: { id: string; status?: ApplicationStatus; notes?: string; interviewDate?: string; salaryOffered?: number }) =>
-      api.applications.patch(id, patch),
+    mutationFn: ({ id, ...patch }: { id: string } & ApplicationPatch) => api.applications.patch(id, patch),
     onSuccess: () => invalidateMatchData(client),
   });
 }

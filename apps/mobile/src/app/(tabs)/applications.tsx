@@ -8,6 +8,7 @@ import { ApplicationSheet } from '@/features/applications/ApplicationSheet';
 import { APPLICATION_STAGES, stageStyle } from '@/features/applications/stages';
 import { applicationStatusLabel, formatDateTime, formatRelativeTime, formatSalary, nextApplicationStage, nextStageAction } from '@/lib/format';
 import { haptics } from '@/lib/haptics';
+import { trackerStats } from '@/lib/tracker-stats';
 import { toast } from '@/state/toast-store';
 import { Avatar } from '@/ui/Avatar';
 import { useBadgeColors } from '@/ui/Badge';
@@ -82,6 +83,8 @@ export default function ApplicationsScreen() {
         </Text>
       </View>
 
+      <FunnelCard applications={list} />
+
       <StagePicker counts={counts} value={stage} onChange={setSelectedStage} />
 
       {apps.isLoading ? (
@@ -111,7 +114,7 @@ export default function ApplicationsScreen() {
         onOpenJob={(jobId) => router.push({ pathname: '/job/[id]', params: { id: jobId } })}
         onSave={(id, changes) =>
           patch.mutate(
-            { id, status: changes.status, notes: changes.notes, interviewDate: changes.interviewDate },
+            { id, status: changes.status, notes: changes.notes, interviewDate: changes.interviewDate, clearInterviewDate: changes.clearInterviewDate },
             {
               onSuccess: (updated) => {
                 haptics.success();
@@ -134,6 +137,48 @@ export default function ApplicationsScreen() {
         }
       />
     </Screen>
+  );
+}
+
+/** Phase 7 metrics: how the search is going, in one glance. Hidden until the first application. */
+function FunnelCard({ applications }: { applications: JobApplication[] }) {
+  const { colors, radius } = useTheme();
+  const stats = trackerStats(applications);
+  if (stats.applied === 0) return null;
+
+  const steps = [
+    { label: stats.applied === 1 ? 'Postulación' : 'Postulaciones', value: stats.applied, color: colors.info },
+    { label: stats.interviews === 1 ? 'Entrevista' : 'Entrevistas', value: stats.interviews, color: colors.accent },
+    { label: stats.offers === 1 ? 'Oferta' : 'Ofertas', value: stats.offers, color: colors.success },
+  ];
+  const rate = stats.responseRate === null ? null : Math.round(stats.responseRate * 100);
+
+  return (
+    <Card style={{ gap: 12 }} testID="funnel-card">
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text variant="heading">Tu avance</Text>
+        {rate !== null ? <Text variant="caption" tone="muted">Te llamaron en el {rate}%</Text> : null}
+      </View>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        {steps.map((step, i) => (
+          <View key={step.label} style={{ flex: 1, gap: 6 }}>
+            <View style={{ height: 6, borderRadius: radius.pill, backgroundColor: colors.surfaceMuted, overflow: 'hidden' }}>
+              <View style={{ width: `${stats.applied === 0 ? 0 : Math.max(step.value > 0 ? 8 : 0, (step.value / stats.applied) * 100)}%`, height: '100%', backgroundColor: step.color }} />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
+              <Text variant="title" style={{ color: step.value > 0 ? step.color : colors.textSubtle }}>{step.value}</Text>
+              {i < steps.length - 1 ? <Icon name="chevron-forward" size={12} tone="subtle" /> : null}
+            </View>
+            <Text variant="caption" tone="muted" numberOfLines={1}>{step.label}</Text>
+          </View>
+        ))}
+      </View>
+      {rate !== null && stats.applied >= 5 && rate < 15 ? (
+        <Text variant="caption" tone="muted">
+          Consejo: revisa las ofertas «Excelente opción» primero y pide a tu agente que descarte las que no encajan.
+        </Text>
+      ) : null}
+    </Card>
   );
 }
 

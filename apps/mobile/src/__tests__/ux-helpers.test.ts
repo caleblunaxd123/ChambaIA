@@ -1,4 +1,4 @@
-import type { Preferences, Profile } from '@/api/schemas';
+import type { JobApplication, Preferences, Profile } from '@/api/schemas';
 import { combineDayTime } from '@/features/applications/InterviewPicker';
 import { passwordChecks } from '@/features/auth/schemas';
 import {
@@ -13,6 +13,7 @@ import {
 } from '@/lib/format';
 import { jobsLink } from '@/features/jobs/links';
 import { profileStrength } from '@/lib/profile-strength';
+import { trackerStats } from '@/lib/tracker-stats';
 import { useToast } from '@/state/toast-store';
 import { resolveScheme } from '@/ui/theme';
 
@@ -173,5 +174,26 @@ describe('jobs links', () => {
     expect(jobsLink('new', undefined, 1)).toEqual({ pathname: '/jobs', params: { tab: 'new', at: '1' } });
     expect(jobsLink('forYou', 'review', 2).params).toEqual({ tab: 'forYou', category: 'review', at: '2' });
     expect(jobsLink('new', undefined, 1).params.at).not.toBe(jobsLink('new', undefined, 2).params.at);
+  });
+});
+
+describe('tracker funnel', () => {
+  const card = (status: JobApplication['status'], appliedAt: string | null = null, interviewDate: string | null = null) => ({ status, appliedAt, interviewDate });
+
+  it('counts applications, interviews and offers, including discarded ones the user did apply to', () => {
+    const stats = trackerStats([
+      card('interested'),
+      card('applied', '2026-09-20T00:00:00Z'),
+      card('applied', '2026-09-21T00:00:00Z'),
+      card('interview', '2026-09-22T00:00:00Z', '2026-10-03T15:00:00Z'),
+      card('offer', '2026-09-10T00:00:00Z'),
+      card('discarded', '2026-09-01T00:00:00Z'),
+    ]);
+    expect(stats).toEqual({ applied: 5, interviews: 2, offers: 1, responseRate: 0.4 });
+  });
+
+  it('has no response rate before the first application', () => {
+    expect(trackerStats([card('interested'), card('found')]).responseRate).toBeNull();
+    expect(trackerStats([]).applied).toBe(0);
   });
 });

@@ -1,5 +1,6 @@
 using ChambaIA.Infrastructure.Auth;
 using ChambaIA.Infrastructure.Identity;
+using ChambaIA.Infrastructure.Ingestion;
 using ChambaIA.Infrastructure.Matching;
 using ChambaIA.Infrastructure.Persistence;
 using ChambaIA.Infrastructure.Resumes;
@@ -49,9 +50,40 @@ public static class DependencyInjection
         services.AddScoped<ResumeService>();
 
         services.Configure<SeedOptions>(config.GetSection(SeedOptions.Section));
-        services.AddScoped<DemoDataSeeder>();
+
+        AddIngestion(services, config);
 
         return services;
+    }
+
+    /// <summary>
+    /// Sources are registered from configuration (Ingestion:IncludeDemo, Ingestion:Feeds). Feed connectors are singletons
+    /// so their ETag cache survives between runs; the service itself is scoped (it owns a DbContext).
+    /// </summary>
+    private static void AddIngestion(IServiceCollection services, IConfiguration config)
+    {
+        services.Configure<IngestionOptions>(config.GetSection(IngestionOptions.Section));
+        var ingestion = config.GetSection(IngestionOptions.Section).Get<IngestionOptions>() ?? new IngestionOptions();
+
+        services.AddHttpClient(JsonFeedSource.HttpClientName, c =>
+        {
+            c.Timeout = TimeSpan.FromSeconds(30);
+            c.DefaultRequestHeaders.UserAgent.ParseAdd("ChambaIA-FeedReader/1.0 (+https://chambaia.dev/fuentes)");
+            c.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+        });
+
+        services.AddSingleton<DemoJobSource>();
+        if (ingestion.IncludeDemo) services.AddSingleton<IJobSource>(sp => sp.GetRequiredService<DemoJobSource>());
+
+        foreach (var feed in ingestion.Feeds.Where(f => f.Enabled && !string.IsNullOrWhiteSpace(f.Key) && !string.IsNullOrWhiteSpace(f.Url)))
+        {
+            services.AddSingleton<IJobSource>(sp => new JsonFeedSource(
+                feed,
+                sp.GetRequiredService<IHttpClientFactory>(),
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<JsonFeedSource>>()));
+        }
+
+        services.AddScoped<IngestionService>();
     }
 
     /// <summary>Identity with the policy used by the whole product. Only the API needs the web-facing parts.</summary>
@@ -72,6 +104,10 @@ public static class DependencyInjection
             })
             .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<AppDbContext>();
+
+        // The seeder creates the demo user, so it lives with Identity (the worker has no UserManager and must not
+        // see it: Development validates every registration at startup and would refuse to boot).
+        services.AddScoped<DemoDataSeeder>();
 
         return services;
     }

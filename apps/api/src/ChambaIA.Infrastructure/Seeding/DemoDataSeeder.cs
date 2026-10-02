@@ -1,8 +1,6 @@
 using ChambaIA.Domain.Entities;
-using ChambaIA.Domain.Enums;
-using ChambaIA.Domain.Skills;
-using ChambaIA.Domain.Text;
 using ChambaIA.Infrastructure.Identity;
+using ChambaIA.Infrastructure.Ingestion;
 using ChambaIA.Infrastructure.Matching;
 using ChambaIA.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
@@ -30,12 +28,12 @@ public sealed class DemoDataSeeder(
     AppDbContext db,
     UserManager<ApplicationUser> users,
     MatchRecomputeService matcher,
+    IngestionService ingestion,
+    DemoJobSource demoSource,
     IOptions<SeedOptions> options,
     TimeProvider clock,
     ILogger<DemoDataSeeder> logger)
 {
-    private const string SourceKey = "demo";
-
     public async Task SeedAsync(CancellationToken ct = default)
     {
         var opts = options.Value;
@@ -46,91 +44,13 @@ public sealed class DemoDataSeeder(
             return;
         }
 
-        var source = await EnsureSourceAsync(ct);
-        await EnsureJobsAsync(source, ct);
+        // The demo offers go through the real ingestion pipeline (normaliser + dedup), like any production source.
+        await ingestion.RunAsync([demoSource], recompute: false, ct);
         var user = await EnsureDemoUserAsync(opts, ct);
         await matcher.RecomputeForUserAsync(user.Id, ct);
 
         logger.LogInformation("Demo data ready ({Email}, {Jobs} offers).", opts.DemoEmail, DemoJobs.All.Count);
     }
-
-    private async Task<JobSource> EnsureSourceAsync(CancellationToken ct)
-    {
-        var source = await db.JobSources.SingleOrDefaultAsync(s => s.Key == SourceKey, ct);
-        if (source is not null) return source;
-
-        source = new JobSource
-        {
-            Key = SourceKey,
-            Name = "Ofertas de demostración",
-            Kind = JobSourceKind.Demo,
-            Notes = "Datos ficticios para validar la experiencia antes de conectar fuentes reales."
-        };
-        db.JobSources.Add(source);
-        await db.SaveChangesAsync(ct);
-        return source;
-    }
-
-    private async Task EnsureJobsAsync(JobSource source, CancellationToken ct)
-    {
-        var now = clock.GetUtcNow();
-        var existing = await db.JobOffers
-            .Where(j => j.SourceId == source.Id)
-            .ToDictionaryAsync(j => j.ExternalId, ct);
-
-        foreach (var demo in DemoJobs.All)
-        {
-            if (!existing.TryGetValue(demo.Id, out var job))
-            {
-                job = new JobOffer { SourceId = source.Id, ExternalId = demo.Id };
-                db.JobOffers.Add(job);
-            }
-
-            Map(demo, job, source, now);
-        }
-
-        source.LastFetchedAt = now;
-        await db.SaveChangesAsync(ct);
-    }
-
-    private static void Map(DemoJob demo, JobOffer job, JobSource source, DateTimeOffset now)
-    {
-        var posted = now.AddHours(-demo.HoursAgo);
-
-        job.SourceName = source.Name;
-        job.OriginalUrl = $"https://example.com/empleos/{demo.Id}";
-        job.Title = demo.Title;
-        job.NormalizedTitle = TextNormalizer.Normalize(demo.Title);
-        job.Company = demo.Company;
-        job.NormalizedCompany = TextNormalizer.Normalize(demo.Company);
-        job.Description = demo.Description;
-        job.NormalizedDescription = TextNormalizer.Normalize(demo.Description);
-        job.SalaryMin = demo.SalaryMin;
-        job.SalaryMax = demo.SalaryMax;
-        job.District = demo.District;
-        job.Modality = demo.Modality;
-        job.EmploymentType = demo.Type;
-        job.Industry = demo.Industry;
-        job.Schedule = demo.Schedule;
-        job.WeekdaysOnly = demo.WeekdaysOnly;
-        job.ExperienceRequiredMinMonths = demo.ExperienceMonths;
-        job.EducationRequired = demo.Education;
-        job.EducationRequiredCompleted = demo.EducationCompleted;
-        job.SkillsRequired = demo.Required.Select(r => Requirement(r.Skill, r.Level)).ToList();
-        job.SkillsPreferred = demo.Preferred.Select(k => Requirement(k, null)).ToList();
-        job.PostedAt = posted;
-        job.ExpiresAt = posted.AddDays(30);
-        job.LastSeenAt = now;
-        job.IsActive = true;
-        job.ContentHash = TextNormalizer.ContentHash(demo.Title, demo.Company, demo.District, demo.Description);
-    }
-
-    private static SkillRequirement Requirement(string key, SkillLevel? level) => new()
-    {
-        Key = key,
-        Name = SkillCatalog.FindByKey(key)?.Name ?? key,
-        MinLevel = level
-    };
 
     private async Task<ApplicationUser> EnsureDemoUserAsync(SeedOptions opts, CancellationToken ct)
     {

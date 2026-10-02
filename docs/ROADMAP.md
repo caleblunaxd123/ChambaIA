@@ -21,9 +21,13 @@ Leyenda: [x] hecho · [ ] pendiente
 - [ ] OCR para CV escaneados (hoy se pide el archivo original)
 - [ ] Escaneo antivirus del archivo subido (antes de producción)
 
-## Fase 3 — Ingesta
-- [ ] `IJobSource`, normalización, `JobCluster`, deduplicación en 3 capas (clave, hash, similitud)
-- [ ] Fuente demo como primer conector real del pipeline; job Quartz de ingesta
+## Fase 3 — Ingesta ✅
+- [x] `IJobSource` + `RawJob`, normalizador determinista (sueldo, distrito, modalidad, experiencia, estudios, horario, skills con nivel)
+- [x] Deduplicación en 3 capas (clave, hash, similitud); duplicados agrupados con `DuplicateOfId` (equivale a `JobCluster`)
+- [x] Fuente demo como primer conector del pipeline; conector genérico de feeds JSON con permiso obligatorio
+- [x] `IngestionJob` (Quartz, cada 30 min + al arrancar), retiro de ofertas vencidas/abandonadas, recálculo de matches
+- [x] `GET /sources` (transparencia) y hoja «¿De dónde salen las ofertas?» en la app
+- [ ] Recálculo incremental (solo ofertas nuevas × usuarios) cuando el volumen lo pida
 
 ## Fase 4 — Embeddings y matching vectorial
 - [ ] Servicio local de embeddings (Ollama + bge-m3 / multilingual-e5), índice HNSW, etapa C
@@ -37,7 +41,9 @@ Leyenda: [x] hecho · [ ] pendiente
 ## Fase 7 — Tracker
 - [x] Fechas de entrevista con selector (días + horarios, sin módulo nativo), próxima entrevista en Inicio
 - [x] Avance de etapa en un toque con deshacer
-- [ ] Recordatorios (requiere push, fase 6), métricas
+- [x] Métricas: embudo postulaciones → entrevistas → ofertas y tasa de respuesta
+- [x] Quitar la fecha de entrevista (`clearInterviewDate`)
+- [ ] Recordatorios (requiere push, fase 6)
 
 ## Fase 8 — Proveedores de IA
 - [ ] `IAiProvider`, router por tarea, límites diarios/mensuales, circuit breaker, `AiUsage`, dashboard de costos
@@ -54,4 +60,5 @@ Leyenda: [x] hecho · [ ] pendiente
 - [x] Fuerza del perfil con siguiente paso, accesos directos filtrados, aviso de cambios sin guardar, 404
 
 ## Transversal pendiente
-- [ ] Íconos/splash propios, E2E móvil en CI, CI
+- [x] CI (GitHub Actions: build, 192 pruebas con Testcontainers, typecheck/lint/jest)
+- [ ] Íconos/splash propios, E2E móvil en CI
