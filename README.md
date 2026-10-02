@@ -129,6 +129,13 @@ npm run typecheck && npm run lint && npm test
 - **Perfil**: CV actual (reemplazar / eliminar), borrar historial y eliminar cuenta (borra también los archivos de CV).
 - Plan FREE/PRO: 1 CV (subir otro reemplaza y borra el anterior del disco); PRO+: hasta 5.
 
+## Qué incluye la Fase 6 (alertas)
+
+- **El agente avisa solo cuando vale la pena**: al menos una oferta muy compatible, nunca de 10 p. m. a 7 a. m., máximo 4 por día, y según la frecuencia que elijas (instantánea / 2 h / 6 h / diaria). Lo que ya viste al configurar tu perfil no se anuncia como novedad.
+- **Bandeja de avisos** en la app (campana con contador en Inicio): funciona siempre, aun sin push. Aviso de prueba incluido.
+- **Push con Expo** (`Push__Provider=Expo`): registro de dispositivos, lotes, reintentos y desactivación automática de tokens muertos. Requiere un proyecto EAS y credenciales FCM; hasta entonces la app lo dice con honestidad. Guía: [docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md).
+- **Recálculo incremental**: tras cada ingesta solo se evalúan las ofertas nuevas o cambiadas.
+
 ## Qué incluye la Fase 5 (feed y explicación)
 
 - **¿Por qué encaja conmigo?** por ejes —cargo, habilidades, experiencia, condiciones y parecido con tu perfil— con un nivel (Alto/Medio/Bajo) y una frase; nunca porcentajes.
@@ -144,7 +151,7 @@ npm run typecheck && npm run lint && npm test
 - **Opcional y resiliente**: `Embeddings__Provider=None` (por defecto) = el producto funciona igual; si Ollama cae, un circuit breaker evita martillarlo y el worker completa los vectores cuando vuelve.
 - Guía de instalación (PC, Docker y servidor Contabo), seguridad y calibración: [docs/OLLAMA.md](docs/OLLAMA.md).
 
-Lo que **todavía no** existe (ver roadmap): conectores a portales reales (fase 10, requiere revisar términos de cada uno), notificaciones push, enriquecimiento con LLM barato (fase 8), OCR de CV escaneados, preparación de postulación.
+Lo que **todavía no** existe (ver roadmap): conectores a portales reales (fase 10, requiere revisar términos de cada uno), push real en producción (necesita EAS/FCM), enriquecimiento con LLM barato (fase 8), OCR de CV escaneados, preparación de postulación.
 
 ## Renovación de UX y diseño
 

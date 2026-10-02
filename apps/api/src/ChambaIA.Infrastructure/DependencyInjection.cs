@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using ChambaIA.Infrastructure.Identity;
 using ChambaIA.Infrastructure.Ingestion;
 using ChambaIA.Infrastructure.Matching;
+using ChambaIA.Infrastructure.Notifications;
 using ChambaIA.Infrastructure.Persistence;
 using ChambaIA.Infrastructure.Resumes;
 using ChambaIA.Infrastructure.Seeding;
@@ -44,6 +45,7 @@ public static class DependencyInjection
             });
 
         AddEmbeddings(services, config);
+        AddPush(services, config);
         services.AddScoped<MatchRecomputeService>();
         services.AddScoped<TrackerService>();
 
@@ -83,6 +85,24 @@ public static class DependencyInjection
             ? sp.GetRequiredService<OllamaEmbeddingProvider>()
             : sp.GetRequiredService<NullEmbeddingProvider>());
         services.AddScoped<EmbeddingService>();
+    }
+
+    /// <summary>Alerts: the digest service always runs; actual push delivery happens only with Push:Provider = Expo.</summary>
+    private static void AddPush(IServiceCollection services, IConfiguration config)
+    {
+        services.Configure<PushOptions>(config.GetSection(PushOptions.Section));
+        services.AddTransient<NullPushSender>();
+        services.AddHttpClient<ExpoPushSender>((sp, client) =>
+        {
+            var o = sp.GetRequiredService<IOptions<PushOptions>>().Value;
+            client.BaseAddress = new Uri(o.BaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("ChambaIA-Push/1.0");
+        });
+        services.AddScoped<IPushSender>(sp => sp.GetRequiredService<IOptions<PushOptions>>().Value.Enabled
+            ? sp.GetRequiredService<ExpoPushSender>()
+            : sp.GetRequiredService<NullPushSender>());
+        services.AddScoped<DigestService>();
     }
 
     private static void AddIngestion(IServiceCollection services, IConfiguration config)

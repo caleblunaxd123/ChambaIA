@@ -104,7 +104,7 @@ export function PreferencesFields({ control, draft, onChange, showRoles = true, 
       {showAlerts ? (
         <Section title="Alertas">
           <Select label="Frecuencia de avisos" options={FREQUENCIES} value={draft.notificationFrequency} onChange={(v) => v && onChange('notificationFrequency', v)} />
-          <ToggleRow label="Avisos en el celular" description="Guardamos tu elección; los avisos se activan muy pronto y solo llegarán cuando algo encaje contigo." value={draft.pushEnabled} onChange={(v) => onChange('pushEnabled', v)} />
+          <ToggleRow label="Avisos en el celular" description="Solo te avisamos cuando aparece algo que encaja muy bien contigo. Máximo unos pocos al día y nunca de noche." value={draft.pushEnabled} onChange={(v) => onChange('pushEnabled', v)} />
         </Section>
       ) : null}
     </>

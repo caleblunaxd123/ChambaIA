@@ -87,6 +87,10 @@ reintentos por mensaje, se añade un outbox en PostgreSQL. *Nota*: Quartz 4.x ap
 - Refresh de token *single-flight*: 5 peticiones con 401 ⇒ 1 refresh. Un fallo de red durante el refresh **no** cierra la sesión.
 - Tokens en Keychain/Keystore (`expo-secure-store`).
 
+### Alertas (fase 6)
+
+`NotificationJob` (Quartz, cada 5 min) → `DigestService`: por usuario decide con `NotificationPolicy` (dominio puro), guarda el aviso en la bandeja **antes** de enviar (memoria anti-duplicados) y empuja a los dispositivos vía `IPushSender` (`ExpoPushSender` o `NullPushSender`). Tras la ingesta, `MatchRecomputeService.RecomputeForJobsAsync` evalúa solo las ofertas nuevas o cambiadas. Detalle en [NOTIFICATIONS.md](NOTIFICATIONS.md).
+
 ### Redis hoy
 
 Registrado como `IDistributedCache` y comprobado por `/health/ready`. Usos planeados: caché de feed, contadores de presupuesto de IA (fase 8), claves de dedupe de ingesta. No se usa aún para nada que no esté justificado.

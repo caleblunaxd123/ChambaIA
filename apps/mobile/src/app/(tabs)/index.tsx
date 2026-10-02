@@ -2,12 +2,13 @@ import { useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
 import type { FeedFilters, FeedTab } from '@/api/endpoints';
-import { useApplications, useFeed, useOverview, usePreferences, useProfile, useResumes } from '@/api/queries';
+import { useApplications, useFeed, useNotificationSummary, useOverview, usePreferences, useProfile, useResumes } from '@/api/queries';
 import type { ApplicationStatus, JobApplication, Overview } from '@/api/schemas';
 import { JobCard } from '@/features/jobs/JobCard';
 import { jobsLink } from '@/features/jobs/links';
 import { useJobActions } from '@/features/jobs/useJobActions';
 import { firstName, formatDateTime, formatRelativeTime, greeting, nextInterview, plural } from '@/lib/format';
+import { unreadBadge } from '@/features/notifications/push';
 import { profileStrength } from '@/lib/profile-strength';
 import { useAuthStore } from '@/state/auth-store';
 import { Avatar } from '@/ui/Avatar';
@@ -31,6 +32,7 @@ export default function HomeScreen() {
   const resumes = useResumes();
   const applications = useApplications();
   const feed = useFeed('forYou', {});
+  const unread = useNotificationSummary().data?.unread ?? 0;
   const { open, save, unsave, discard, busy } = useJobActions();
 
   const refreshing = overview.isRefetching || feed.isRefetching;
@@ -55,6 +57,7 @@ export default function HomeScreen() {
           <Text variant="caption" tone="muted">{greeting()}{name ? ',' : ''}</Text>
           <Text variant="display" testID="home-greeting" numberOfLines={1}>{name || 'Hola'} 👋</Text>
         </View>
+        <NotificationBell unread={unread} onPress={() => router.push('/notifications')} />
         <Pressable accessibilityRole="button" accessibilityLabel="Ir a tu perfil" onPress={() => router.navigate('/profile')} hitSlop={6}>
           <Avatar name={user?.fullName ?? '?'} size={46} shape="circle" />
         </Pressable>
@@ -112,6 +115,22 @@ export default function HomeScreen() {
         </>
       )}
     </Screen>
+  );
+}
+
+/** Bell with the unread count; the only way into the notice inbox. */
+function NotificationBell({ unread, onPress }: { unread: number; onPress: () => void }) {
+  const { colors } = useTheme();
+  const badge = unreadBadge(unread);
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={unread > 0 ? `Avisos, ${unread} sin leer` : 'Avisos'} onPress={onPress} hitSlop={6} testID="home-bell" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
+      <Icon name={unread > 0 ? 'notifications' : 'notifications-outline'} size={22} tone={unread > 0 ? 'primary' : 'muted'} />
+      {badge ? (
+        <View testID="home-bell-badge" style={{ position: 'absolute', top: -2, right: -2, minWidth: 18, height: 18, paddingHorizontal: 4, borderRadius: 9, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' }}>
+          <Text variant="caption" style={{ color: '#fff', fontSize: 11, lineHeight: 14, fontFamily: fontFamily.bold }}>{badge}</Text>
+        </View>
+      ) : null}
+    </Pressable>
   );
 }
 

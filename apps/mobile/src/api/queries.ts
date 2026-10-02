@@ -15,6 +15,8 @@ export const keys = {
   profile: ['profile'] as const,
   preferences: ['preferences'] as const,
   resumes: ['resumes'] as const,
+  notifications: ['notifications'] as const,
+  notificationSummary: ['notifications', 'summary'] as const,
 };
 
 
@@ -226,4 +228,36 @@ export function useDeleteResume() {
 export function useClearHistory() {
   const client = useQueryClient();
   return useMutation({ mutationFn: api.account.clearHistory, onSuccess: () => invalidateMatchData(client) });
+}
+
+/** The bell badge. Polled gently: a notice can arrive while the app is open, and a push also refreshes it. */
+export function useNotificationSummary(enabled = true) {
+  return useQuery({ queryKey: keys.notificationSummary, queryFn: api.notifications.summary, enabled, refetchInterval: 60_000, staleTime: 15_000 });
+}
+
+export function useNotifications() {
+  return useInfiniteQuery({
+    queryKey: [...keys.notifications, 'list'],
+    queryFn: ({ pageParam }) => api.notifications.list(pageParam),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.hasMore ? last.page + 1 : undefined),
+  });
+}
+
+export function useMarkNotificationRead() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.notifications.read(id),
+    onSuccess: () => client.invalidateQueries({ queryKey: keys.notifications }),
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: api.notifications.readAll, onSuccess: () => client.invalidateQueries({ queryKey: keys.notifications }) });
+}
+
+export function useSendTestNotification() {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: api.notifications.test, onSettled: () => client.invalidateQueries({ queryKey: keys.notifications }) });
 }

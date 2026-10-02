@@ -52,10 +52,11 @@ public sealed class IngestionService(
     {
         var reports = new List<SourceReport>();
         var healthy = new List<Guid>();
+        var changedJobs = new HashSet<Guid>(); // offers that are new or changed: the only ones worth re-matching
 
         foreach (var source in toRun)
         {
-            var (report, sourceId) = await RunSourceAsync(source, ct);
+            var (report, sourceId) = await RunSourceAsync(source, changedJobs, ct);
             reports.Add(report);
             if (report.Error is null) healthy.Add(sourceId);
             db.ChangeTracker.Clear();
@@ -66,9 +67,10 @@ public sealed class IngestionService(
         // Stage C: give new/changed offers their vector before anyone is matched. No-op when embeddings are off or the server is down.
         await embeddings.EmbedPendingJobsAsync(ct: ct);
 
+        // Incremental: retired offers need no work (feeds only show active ones); new/changed ones are evaluated for every user.
         var users = 0;
-        if (recompute && (reports.Sum(r => r.Created + r.Updated) > 0 || deactivated > 0))
-            users = await matcher.RecomputeAllAsync(ct);
+        if (recompute && changedJobs.Count > 0)
+            users = await matcher.RecomputeForJobsAsync(changedJobs, ct);
 
         var result = new IngestionReport(reports, deactivated, users);
         logger.LogInformation(
@@ -77,7 +79,7 @@ public sealed class IngestionService(
         return result;
     }
 
-    private async Task<(SourceReport Report, Guid SourceId)> RunSourceAsync(IJobSource connector, CancellationToken ct)
+    private async Task<(SourceReport Report, Guid SourceId)> RunSourceAsync(IJobSource connector, ISet<Guid> changedJobs, CancellationToken ct)
     {
         var source = await EnsureSourceAsync(connector, ct);
         if (!source.IsEnabled) return (new SourceReport(connector.Key, 0, 0, 0, 0, 0, 0, "Fuente desactivada."), source.Id);
@@ -98,7 +100,7 @@ public sealed class IngestionService(
 
         try
         {
-            return (await StoreAsync(connector, source, raws, ct), source.Id);
+            return (await StoreAsync(connector, source, raws, changedJobs, ct), source.Id);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
@@ -111,7 +113,7 @@ public sealed class IngestionService(
         }
     }
 
-    private async Task<SourceReport> StoreAsync(IJobSource connector, JobSource source, IReadOnlyList<RawJob> raws, CancellationToken ct)
+    private async Task<SourceReport> StoreAsync(IJobSource connector, JobSource source, IReadOnlyList<RawJob> raws, ISet<Guid> changedJobs, CancellationToken ct)
     {
         var now = clock.GetUtcNow();
         var existing = await db.JobOffers.Where(j => j.SourceId == source.Id).ToDictionaryAsync(j => j.ExternalId, ct);
@@ -135,7 +137,11 @@ public sealed class IngestionService(
                 var wasDuplicate = offer.DuplicateOfId is not null;
                 job.ApplyTo(offer, source.Name, now);
                 offer.IsActive = !wasDuplicate;
-                if (changed) updated++;
+                if (changed)
+                {
+                    updated++;
+                    if (offer.IsActive) changedJobs.Add(offer.Id);
+                }
                 else unchanged++;
                 continue;
             }
@@ -155,6 +161,7 @@ public sealed class IngestionService(
             {
                 addedThisRun.Add(offer);
                 created++;
+                changedJobs.Add(offer.Id);
             }
 
             db.JobOffers.Add(offer);

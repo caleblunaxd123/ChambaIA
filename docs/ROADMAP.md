@@ -43,15 +43,22 @@ Leyenda: [x] hecho · [ ] pendiente
 - [x] Orden del feed: recomendado (por tab), más recientes, mejor sueldo
 - [ ] Explicación con texto generado por IA (fase 8, opcional; hoy es determinista y gratis)
 
-## Fase 6 — Alertas y workers
-- [ ] Expo Push, registro de dispositivos, resúmenes por frecuencia, recálculo incremental tras ingesta
+## Fase 6 — Alertas y workers ✅
+- [x] Política anti-bombardeo probada: solo ofertas muy compatibles, horario de descanso (22–7 h Lima), tope 4/día, frecuencia instantánea/2 h/6 h/diaria
+- [x] Bandeja de avisos (API + app: campana con contador, marcar leídos, aviso de prueba) y memoria anti-duplicados
+- [x] Registro de dispositivos (idempotente, un token = una cuenta, máx. 5) y baja al cerrar sesión
+- [x] Cliente Expo Push: lotes de 100, reintento ante 5xx, tokens muertos desactivados, nunca lanza excepciones
+- [x] Recálculo incremental tras la ingesta (solo ofertas nuevas o cambiadas)
+- [x] `NotificationJob` en el worker (cada 5 min)
+- [ ] Entrega push real: requiere proyecto EAS + credenciales FCM + build de desarrollo (ver [NOTIFICATIONS.md](NOTIFICATIONS.md))
+- [ ] Hora de descanso y tope configurables por usuario (hoy son del servidor)
 
 ## Fase 7 — Tracker
 - [x] Fechas de entrevista con selector (días + horarios, sin módulo nativo), próxima entrevista en Inicio
 - [x] Avance de etapa en un toque con deshacer
 - [x] Métricas: embudo postulaciones → entrevistas → ofertas y tasa de respuesta
 - [x] Quitar la fecha de entrevista (`clearInterviewDate`)
-- [ ] Recordatorios (requiere push, fase 6)
+- [ ] Recordatorios de entrevista (la infraestructura de avisos ya existe; falta programarlos)
 
 ## Fase 8 — Proveedores de IA
 - [ ] `IAiProvider`, router por tarea, límites diarios/mensuales, circuit breaker, `AiUsage`, dashboard de costos

@@ -250,3 +250,28 @@ export const sourceSchema = z.object({
   healthy: z.boolean(),
 });
 export type JobSourceInfo = z.infer<typeof sourceSchema>;
+
+// ---------- notifications ----------
+
+export const notificationKind = z.enum(['newJobs', 'test']);
+
+export const notificationSchema = z.object({
+  id: z.string(),
+  kind: notificationKind,
+  title: z.string(),
+  body: z.string(),
+  jobId: z.string().nullable(),
+  matchCount: z.number(),
+  strongCount: z.number(),
+  createdAt: z.string(),
+  readAt: z.string().nullable(),
+});
+export type AppNotification = z.infer<typeof notificationSchema>;
+
+export const notificationPageSchema = pagedSchema(notificationSchema);
+
+export const notificationSummarySchema = z.object({ unread: z.number(), activeDevices: z.number(), pushConfigured: z.boolean() });
+export type NotificationSummary = z.infer<typeof notificationSummarySchema>;
+
+export const testNotificationSchema = z.object({ devices: z.number(), accepted: z.number(), pushConfigured: z.boolean() });
+export type TestNotificationResult = z.infer<typeof testNotificationSchema>;

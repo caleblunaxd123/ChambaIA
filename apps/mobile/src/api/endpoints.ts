@@ -17,9 +17,12 @@ import {
   feedPageSchema,
   jobDetailResponseSchema,
   matchSummarySchema,
+  notificationPageSchema,
+  notificationSummarySchema,
   overviewSchema,
   preferencesSchema,
   profileSchema,
+  testNotificationSchema,
 } from './schemas';
 
 export type FeedTab = 'forYou' | 'new' | 'saved';
@@ -109,6 +112,19 @@ export const api = {
   catalog: {
     districts: () => request("/catalog/districts", { schema: z.array(z.string()) }),
     skills: () => request("/catalog/skills", { schema: z.array(z.object({ key: z.string(), name: z.string() })) }),
+  },
+
+  devices: {
+    register: (token: string, platform: 'ios' | 'android') => request('/devices', { method: 'POST', body: { token, platform } }),
+    unregister: (token: string) => request('/devices/unregister', { method: 'POST', body: { token } }),
+  },
+
+  notifications: {
+    list: (page: number, pageSize = 20) => request(`/notifications${buildQuery({ page, pageSize })}`, { schema: notificationPageSchema }),
+    summary: () => request('/notifications/summary', { schema: notificationSummarySchema }),
+    read: (id: string) => request(`/notifications/${id}/read`, { method: 'POST' }),
+    readAll: () => request('/notifications/read-all', { method: 'POST' }),
+    test: () => request('/notifications/test', { method: 'POST', schema: testNotificationSchema }),
   },
 
   agent: {

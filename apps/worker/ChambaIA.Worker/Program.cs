@@ -32,6 +32,14 @@ builder.Services.AddQuartz(q =>
     // Also once shortly after start, so a fresh deploy does not wait half an hour for its first offers.
     q.AddTrigger(t => t.ForJob(ingestion).WithIdentity($"{nameof(IngestionJob)}-startup").StartAt(DateBuilder.FutureDate(15, IntervalUnit.Second)));
 
+    // Alerts: every 5 minutes decide, per user, whether there is something worth a notification.
+    var notifications = new JobKey(nameof(NotificationJob));
+    q.AddJob<NotificationJob>(o => o.WithIdentity(notifications));
+    q.AddTrigger(t => t
+        .ForJob(notifications)
+        .WithIdentity($"{nameof(NotificationJob)}-trigger")
+        .WithCronSchedule(builder.Configuration.GetValue("Worker:NotificationCron", "0 0/5 * * * ?")));
+
     // Catch-up for vectors: offers ingested or profiles saved while the embedding server was down get them here.
     var embeddings = new JobKey(nameof(EmbeddingJob));
     q.AddJob<EmbeddingJob>(o => o.WithIdentity(embeddings).DisallowConcurrentExecution());

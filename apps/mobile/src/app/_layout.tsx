@@ -16,6 +16,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ApiError } from '@/api/client';
 import { useProfile } from '@/api/queries';
+import { PushBootstrap } from '@/features/notifications/PushBootstrap';
 import { useAppearance } from '@/state/appearance-store';
 import { useAuthStore } from '@/state/auth-store';
 import { HeroSurface } from '@/ui/Card';
@@ -76,6 +77,7 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
         <RootStack />
+        {status === 'signedIn' ? <PushBootstrap /> : null}
         <ToastHost />
       </QueryClientProvider>
     </SafeAreaProvider>
@@ -111,6 +113,7 @@ function RootStack() {
       <Stack.Protected guard={signedIn && !needsOnboarding}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="job/[id]" />
+        <Stack.Screen name="notifications" />
         <Stack.Screen name="edit-profile" options={{ presentation: 'modal' }} />
         <Stack.Screen name="edit-preferences" options={{ presentation: 'modal' }} />
       </Stack.Protected>
