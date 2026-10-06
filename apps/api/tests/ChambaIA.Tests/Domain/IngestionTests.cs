@@ -22,6 +22,29 @@ public class JobNormalizerTests
         return tweak is null ? raw : tweak(raw);
     }
 
+    [Theory]
+    [InlineData("Se necesita operario. Pagamos S/ 1,100 semanales. Experiencia deseable.")]
+    [InlineData("Remuneración de 1100 soles quincenales más bono")]
+    [InlineData("Pago de S/ 1,500 por hora trabajada")]
+    [InlineData("Jornal de 1200 soles")]
+    [InlineData("Ganarás 1,100 soles diarios")]
+    public void An_amount_described_as_weekly_biweekly_hourly_or_daily_is_never_read_as_a_monthly_salary(string description)
+    {
+        // Found with a real local model run: "S/ 1,100 semanales" was stored as a monthly salary of 1,100.
+        var job = Norm(Raw(description));
+
+        Assert.Null(job.SalaryMin);
+        Assert.Null(job.SalaryMax);
+    }
+
+    [Fact]
+    public void A_monthly_salary_survives_an_unrelated_period_word_elsewhere_in_the_text()
+    {
+        var job = Norm(Raw("Sueldo S/ 1,800 mensuales. Además ofrecemos un bono diario de puntualidad por asistencia completa y capacitación."));
+
+        Assert.Equal(1800, job.SalaryMin);
+    }
+
     private static NormalizedJob Norm(RawJob raw) => JobNormalizer.Normalize(raw, Now).Job ?? throw new Xunit.Sdk.XunitException(JobNormalizer.Normalize(raw, Now).Error);
 
     [Theory]

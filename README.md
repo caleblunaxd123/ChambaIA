@@ -129,6 +129,13 @@ npm run typecheck && npm run lint && npm test
 - **Perfil**: CV actual (reemplazar / eliminar), borrar historial y eliminar cuenta (borra también los archivos de CV).
 - Plan FREE/PRO: 1 CV (subir otro reemplaza y borra el anterior del disco); PRO+: hasta 5.
 
+## Qué incluye la Fase 8 (proveedores de IA)
+
+- **Una sola puerta para los modelos** (`AiRouter`): proveedores intercambiables por configuración (Ollama local, cualquier API compatible con OpenAI/DeepSeek/Gemini/Groq, y Claude), rutas por tarea con respaldo, *circuit breaker* por proveedor y **presupuestos** (global, del sistema y por plan) revisados antes de cada llamada. **Apagado por defecto**: sin IA el producto funciona igual.
+- **Cada llamada se registra** en `AiUsage` con tokens y costo estimado; tablero real en `GET /api/v1/admin/ai/usage` (solo cuentas de `Admin__Emails`).
+- **Primer uso: ofertas ambiguas.** Si el parser determinista deja huecos (sueldo, experiencia, habilidades), un modelo barato los completa, y cada dato se **verifica contra el texto de la oferta** antes de guardarse: probando modelos locales reales, uno inventó `11000` para «1,100 semanales». Detalle y mediciones en [docs/AI-COSTS.md](docs/AI-COSTS.md).
+- Dos correcciones que salieron de probar con modelos reales: al ordenar por «Mejor sueldo» las ofertas sin sueldo aparecían primero, y el normalizador leía «S/ 1,100 **semanales**» como sueldo mensual (ahora los montos semanales, quincenales, diarios, por hora o anuales se dejan sin leer).
+
 ## Qué incluye la Fase 7 (tracker)
 
 - **Recordatorios de entrevista**: un aviso el día anterior (entre 24 h y 6 h antes: «Mañana tienes una entrevista… a las 15:30») y otro poco antes («Tu entrevista es en 2 horas»). Si cambias la fecha, vuelven a avisar para la nueva; nunca de noche (esperan a las 7 a. m.) y no cuentan contra el tope diario de ofertas nuevas.

@@ -62,6 +62,9 @@ public class JobOffer
     public Vector? Embedding { get; set; }
     /// <summary>Hash of the text (and model) the embedding was made from. A mismatch means it is stale and must be redone.</summary>
     public string? EmbeddingHash { get; set; }
+
+    /// <summary>The content version (see ContentHash) the AI extraction step already looked at. A mismatch means: look again.</summary>
+    public string? AiExtractionHash { get; set; }
 }
 
 public class SkillRequirement

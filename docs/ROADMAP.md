@@ -64,11 +64,19 @@ Leyenda: [x] hecho · [ ] pendiente
 - [ ] Recordatorio también por correo/calendario del teléfono (hoy solo avisos de la app)
 - [ ] Métricas de tiempos (días hasta la primera respuesta) usando el historial
 
-## Fase 8 — Proveedores de IA
-- [ ] `IAiProvider`, router por tarea, límites diarios/mensuales, circuit breaker, `AiUsage`, dashboard de costos
+## Fase 8 — Proveedores de IA ✅
+- [x] `IAiProvider` con tres implementaciones (Ollama, compatible con OpenAI, Anthropic) y router por tarea con respaldo
+- [x] Circuit breaker por proveedor, timeouts por proveedor, un reintento; «sin IA» como resultado normal, nunca excepción
+- [x] Presupuestos: tope global mensual, del sistema y por plan (llamadas/día y USD/mes) en hora de Lima
+- [x] `AiUsage` en cada llamada + tablero de costos `GET /admin/ai/usage` (acceso por lista de correos de configuración)
+- [x] Primer consumidor real: extracción de ofertas ambiguas (`EnrichmentJob`) con verificación contra el texto y habilidades solo «deseables»
+- [x] Correcciones: orden por sueldo con ofertas sin sueldo al final; el normalizador ya no lee sueldos semanales/quincenales/por hora como mensuales
+- [ ] Límite por proveedor (hoy: tope global + del sistema)
+- [ ] Pantalla de costos en la app para administradores (hoy: JSON/Swagger)
+- [ ] Calibrar el verificador con ofertas reales etiquetadas (mide cuántos datos válidos descarta)
 
 ## Fase 9 — Asistente
-- [ ] Fallback LLM pequeño para comandos no reconocidos; preparación de postulación (aprobación explícita)
+- [ ] Fallback LLM pequeño para comandos no reconocidos (usará `AiRouter` con la tarea `CommandFallback`, ya lista); preparación de postulación (aprobación explícita)
 
 ## Fase 10 — Fuentes reales
 - [ ] Conectores por API/feeds/páginas públicas respetando robots.txt y términos (ver JOB-SOURCES.md)

@@ -43,6 +43,7 @@ internal sealed class JobOfferConfiguration : IEntityTypeConfiguration<JobOffer>
         b.Property(j => j.SalaryMax).HasPrecision(12, 2);
         b.Property(j => j.Embedding).HasColumnType("vector(1024)");
         b.Property(j => j.EmbeddingHash).HasMaxLength(64);
+        b.Property(j => j.AiExtractionHash).HasMaxLength(64);
 
         b.OwnsMany(j => j.SkillsRequired, o => o.ToJson());
         b.OwnsMany(j => j.SkillsPreferred, o => o.ToJson());

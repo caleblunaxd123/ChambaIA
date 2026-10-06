@@ -70,6 +70,18 @@ public class ExplanationAndFeedTests(ApiFactory factory)
         Assert.Equal(JsonValueKind.Null, detail.GetProperty("match").ValueKind);
     }
 
+    /// <summary>Offers that state a salary come first, highest first; offers that do not say go last (other tests add some to the shared database).</summary>
+    private static void AssertSalaryOrder(JsonElement page)
+    {
+        var tops = page.GetProperty("items").EnumerateArray()
+            .Select(i => i.GetProperty("job").GetProperty("salaryMax") is { ValueKind: JsonValueKind.Number } n ? n.GetDecimal() : (decimal?)null).ToList();
+        var stated = tops.TakeWhile(t => t is not null).Select(t => t!.Value).ToList();
+
+        Assert.True(stated.Count > 5);
+        Assert.Equal(stated.OrderByDescending(s => s), stated);
+        Assert.All(tops.Skip(stated.Count), t => Assert.Null(t));
+    }
+
     [Fact]
     public async Task Feed_can_be_sorted_by_recency_and_by_salary_and_rejects_unknown_values()
     {
@@ -81,12 +93,10 @@ public class ExplanationAndFeedTests(ApiFactory factory)
         Assert.Equal(dates.OrderByDescending(d => d), dates);
 
         var salary = await client.GetFromJsonAsync<JsonElement>("/api/v1/matches?sort=salary&pageSize=50");
-        var tops = salary.GetProperty("items").EnumerateArray().Select(i => i.GetProperty("job").GetProperty("salaryMax").GetDecimal()).ToList();
-        Assert.Equal(tops.OrderByDescending(s => s), tops);
+        AssertSalaryOrder(salary);
 
         var jobsBySalary = await client.GetFromJsonAsync<JsonElement>("/api/v1/jobs?sort=salary&pageSize=50");
-        var jobTops = jobsBySalary.GetProperty("items").EnumerateArray().Select(i => i.GetProperty("job").GetProperty("salaryMax").GetDecimal()).ToList();
-        Assert.Equal(jobTops.OrderByDescending(s => s), jobTops);
+        AssertSalaryOrder(jobsBySalary);
 
         Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync("/api/v1/matches?sort=sideways")).StatusCode);
     }

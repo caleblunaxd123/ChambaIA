@@ -15,8 +15,8 @@ FUENTES → INGESTA → NORMALIZACIÓN → DEDUPLICACIÓN → FILTROS DETERMINÍ
 | Fuentes, normalización, dedup en 3 capas, retiro | 3 | ✅ `Domain/Ingestion` + `Infrastructure/Ingestion` + `IngestionJob` |
 | Embeddings locales (Ollama + bge-m3) + pgvector HNSW (C) | 4 | ✅ `Infrastructure/Embeddings` · ver [OLLAMA.md](OLLAMA.md) |
 | Explicación por ejes, mejoras what-if y ofertas parecidas | 5 | ✅ `Domain/Matching/MatchExplainer` · `GET /jobs/{id}/similar` |
-| Push / workers | 6 | pendiente (Worker + Quartz ya corren la ingesta) |
-| Proveedores de IA + router + límites | 8 | pendiente (tabla `AiUsage` lista) |
+| Alertas, recordatorios, push | 6 · 7 | ✅ `Infrastructure/Notifications` · ver [NOTIFICATIONS.md](NOTIFICATIONS.md) |
+| Proveedores de IA + router + presupuestos + extracción de ofertas ambiguas | 8 | ✅ `Infrastructure/Ai` · `Domain/Ai` · ver [AI-COSTS.md](AI-COSTS.md) |
 
 ## Componentes
 
@@ -86,6 +86,10 @@ reintentos por mensaje, se añade un outbox en PostgreSQL. *Nota*: Quartz 4.x ap
 - Todo response se valida con **Zod** (`src/api/schemas.ts`): un cambio de contrato falla en un solo lugar.
 - Refresh de token *single-flight*: 5 peticiones con 401 ⇒ 1 refresh. Un fallo de red durante el refresh **no** cierra la sesión.
 - Tokens en Keychain/Keystore (`expo-secure-store`).
+
+### IA (fase 8)
+
+Todo modelo se llama a través de `AiRouter` (`Infrastructure/Ai`); la lógica pura (presupuesto, costo, prompt, validación y verificación contra el texto) vive en `Domain/Ai` y se prueba sin red. `EnrichmentJob` (Quartz, cada 15 min) procesa lotes acotados y se detiene en cuanto el presupuesto o los proveedores lo impiden. Detalle en [AI-COSTS.md](AI-COSTS.md).
 
 ### Alertas (fase 6)
 

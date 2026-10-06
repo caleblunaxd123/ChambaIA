@@ -40,6 +40,14 @@ builder.Services.AddQuartz(q =>
         .WithIdentity($"{nameof(NotificationJob)}-trigger")
         .WithCronSchedule(builder.Configuration.GetValue("Worker:NotificationCron", "0 0/5 * * * ?")));
 
+    // Cheap AI, only where the parser left gaps. Does nothing unless Ai:Enabled and a route for JobExtraction exist.
+    var enrichment = new JobKey(nameof(EnrichmentJob));
+    q.AddJob<EnrichmentJob>(o => o.WithIdentity(enrichment));
+    q.AddTrigger(t => t
+        .ForJob(enrichment)
+        .WithIdentity($"{nameof(EnrichmentJob)}-trigger")
+        .WithCronSchedule(builder.Configuration.GetValue("Worker:EnrichmentCron", "0 7/15 * * * ?")));
+
     // Catch-up for vectors: offers ingested or profiles saved while the embedding server was down get them here.
     var embeddings = new JobKey(nameof(EmbeddingJob));
     q.AddJob<EmbeddingJob>(o => o.WithIdentity(embeddings).DisallowConcurrentExecution());

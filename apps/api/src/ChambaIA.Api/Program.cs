@@ -21,6 +21,7 @@ builder.Services
     .AddIdentityCore()
     .AddAuthServices(builder.Configuration)
     .AddApiJson()
+    .Configure<AdminOptions>(builder.Configuration.GetSection(AdminOptions.Section))
     .AddJwtAuthentication()
     .AddApiRateLimiting(builder.Configuration)
     .AddApiProblemDetails()
@@ -66,6 +67,7 @@ api.MapMatches();
 api.MapApplications();
 api.MapCatalog();
 api.MapNotifications();
+api.MapAdmin();
 api.MapSources(app.Environment.IsDevelopment());
 api.MapResumes();
 api.MapAgent();

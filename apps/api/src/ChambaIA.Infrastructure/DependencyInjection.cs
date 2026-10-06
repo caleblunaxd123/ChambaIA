@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using ChambaIA.Infrastructure.Identity;
 using ChambaIA.Infrastructure.Ingestion;
 using ChambaIA.Infrastructure.Matching;
+using ChambaIA.Infrastructure.Ai;
 using ChambaIA.Infrastructure.Notifications;
 using ChambaIA.Infrastructure.Persistence;
 using ChambaIA.Infrastructure.Resumes;
@@ -46,6 +47,7 @@ public static class DependencyInjection
 
         AddEmbeddings(services, config);
         AddPush(services, config);
+        AddAi(services, config);
         services.AddScoped<MatchRecomputeService>();
         services.AddScoped<TrackerService>();
 
@@ -85,6 +87,21 @@ public static class DependencyInjection
             ? sp.GetRequiredService<OllamaEmbeddingProvider>()
             : sp.GetRequiredService<NullEmbeddingProvider>());
         services.AddScoped<EmbeddingService>();
+    }
+
+    /// <summary>
+    /// Language models, behind one door (AiRouter). Ai:Enabled = false (the default) means no model is ever called and the product
+    /// behaves exactly as without this phase. Providers, routes and budgets come from configuration; keys only from the environment.
+    /// </summary>
+    private static void AddAi(IServiceCollection services, IConfiguration config)
+    {
+        services.Configure<AiOptions>(config.GetSection(AiOptions.Section));
+        services.AddHttpClient("ai", client => client.DefaultRequestHeaders.UserAgent.ParseAdd("ChambaIA-AI/1.0"));
+        services.AddSingleton<IAiProviderResolver, AiProviderResolver>();
+        services.AddSingleton<AiCircuits>();
+        services.AddScoped<AiRouter>();
+        services.AddScoped<AiUsageService>();
+        services.AddScoped<JobEnrichmentService>();
     }
 
     /// <summary>Alerts: the digest service always runs; actual push delivery happens only with Push:Provider = Expo.</summary>

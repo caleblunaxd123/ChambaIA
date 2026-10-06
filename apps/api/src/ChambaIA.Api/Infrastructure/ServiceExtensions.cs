@@ -6,6 +6,7 @@ using ChambaIA.Api.Endpoints;
 using ChambaIA.Infrastructure;
 using ChambaIA.Infrastructure.Auth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -48,7 +49,8 @@ public static class ServiceExtensions
                 };
             });
 
-        services.AddAuthorization();
+        services.AddAuthorization(o => o.AddPolicy(AdminEndpoints.Policy, p => p.RequireAuthenticatedUser().AddRequirements(new AdminRequirement())));
+        services.AddSingleton<IAuthorizationHandler, AdminAuthorizationHandler>();
         return services;
     }
 

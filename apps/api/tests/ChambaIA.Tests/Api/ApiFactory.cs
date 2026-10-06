@@ -40,6 +40,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Seed:Enabled", "true");
         builder.UseSetting("Seed:DemoEmail", DemoEmail);
         builder.UseSetting("Seed:DemoPassword", DemoPassword);
+        builder.UseSetting("Admin:Emails:0", DemoEmail);
         builder.UseSetting("Storage:ResumesPath", ResumesDir);
         builder.UseSetting("RateLimiting:UploadsPerMinute", "10000");
         builder.UseSetting("RateLimiting:AuthPerMinute", "10000");

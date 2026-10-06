@@ -47,7 +47,8 @@ public static class MatchesEndpoints
                 rows = sort switch
                 {
                     FeedSort.Recent => rows.OrderByDescending(r => r.Job.PostedAt).ThenByDescending(r => r.Match.OverallScore),
-                    FeedSort.Salary => rows.OrderByDescending(r => r.Job.SalaryMax ?? r.Job.SalaryMin).ThenByDescending(r => r.Match.OverallScore),
+                    // Offers that do not state a salary go last: in PostgreSQL NULLs would otherwise come first in a descending order.
+                    FeedSort.Salary => rows.OrderBy(r => (r.Job.SalaryMax ?? r.Job.SalaryMin) == null).ThenByDescending(r => r.Job.SalaryMax ?? r.Job.SalaryMin).ThenByDescending(r => r.Match.OverallScore),
                     _ => rows.OrderByDescending(r => r.Match.OverallScore).ThenByDescending(r => r.Job.PostedAt)
                 };
 

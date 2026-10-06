@@ -24,7 +24,7 @@ public static class JobsEndpoints
             var query = db.JobOffers.AsNoTracking().ApplyFilters(parsed, clock.GetUtcNow());
             var total = await query.CountAsync(ct);
             var ordered = parsed.Sort == FeedSort.Salary
-                ? query.OrderByDescending(j => j.SalaryMax ?? j.SalaryMin).ThenByDescending(j => j.PostedAt).ThenBy(j => j.Id)
+                ? query.OrderBy(j => (j.SalaryMax ?? j.SalaryMin) == null).ThenByDescending(j => j.SalaryMax ?? j.SalaryMin).ThenByDescending(j => j.PostedAt).ThenBy(j => j.Id)
                 : query.OrderByDescending(j => j.PostedAt).ThenBy(j => j.Id);
             var jobs = await ordered
                 .Skip((page - 1) * pageSize).Take(pageSize)

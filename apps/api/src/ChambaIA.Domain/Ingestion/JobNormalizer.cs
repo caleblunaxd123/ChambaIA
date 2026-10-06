@@ -215,6 +215,7 @@ public static partial class JobNormalizer
 
         foreach (Match m in SalaryRange().Matches(t))
         {
+            if (NotMonthlyNear(t, m)) continue;
             if (requireCurrency && !m.Groups["cur"].Success && !m.Groups["soles"].Success && !m.Groups["soles1"].Success) continue;
             var a = Amount(m.Groups["a"].Value);
             var b = Amount(m.Groups["b"].Value);
@@ -223,11 +224,30 @@ public static partial class JobNormalizer
 
         foreach (Match m in SalarySingle().Matches(t))
         {
+            if (NotMonthlyNear(t, m)) continue;
             if (requireCurrency && !m.Groups["cur"].Success && !m.Groups["soles"].Success) continue;
             if (Amount(m.Groups["a"].Value) is { } a)
                 return HasAny(TextNormalizer.Normalize(t[..m.Index]).Split(' ').TakeLast(2), "hasta") ? (null, a) : (a, null);
         }
         return null;
+    }
+
+    private static readonly string[] NotMonthly =
+    [
+        "semanal", "quincenal", "por hora", "x hora", "la hora", "por dia", "al dia", "diario", "jornal", "a la semana", "por semana", "anual", "al ano", "por ano"
+    ];
+
+    /// <summary>
+    /// "S/ 1,100 semanales" is not a monthly salary. Showing 1,100 as monthly would push the offer to the bottom of "best paid" and
+    /// make a good job look bad, so an amount described as weekly, biweekly, daily, hourly or yearly is left unread (unknown) instead.
+    /// Only the words right around the amount count, so an unrelated "bono diario" elsewhere in the text does not erase a real salary.
+    /// </summary>
+    private static bool NotMonthlyNear(string lowered, Match m)
+    {
+        var from = Math.Max(0, m.Index - 15);
+        var to = Math.Min(lowered.Length, m.Index + m.Length + 30);
+        var window = TextNormalizer.Normalize(lowered[from..to]);
+        return NotMonthly.Any(p => window.Contains(p, StringComparison.Ordinal));
     }
 
     private static decimal? Amount(string raw)
