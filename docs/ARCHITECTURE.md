@@ -91,6 +91,10 @@ reintentos por mensaje, se añade un outbox en PostgreSQL. *Nota*: Quartz 4.x ap
 
 Todo modelo se llama a través de `AiRouter` (`Infrastructure/Ai`); la lógica pura (presupuesto, costo, prompt, validación y verificación contra el texto) vive en `Domain/Ai` y se prueba sin red. `EnrichmentJob` (Quartz, cada 15 min) procesa lotes acotados y se detiene en cuanto el presupuesto o los proveedores lo impiden. Detalle en [AI-COSTS.md](AI-COSTS.md).
 
+### Asistente (fase 9)
+
+`AgentEndpoints` mantiene las reglas primero; si no entienden y hay ruta `CommandFallback`, `AiRouter` devuelve una interpretación que pasa por `AgentCommandValidator` y se ofrece como *propuesta* (`/agent/apply` la valida de nuevo). `ApplicationPrepService` arma el mínimo de datos (`PrepCandidate`), expone su vista previa exacta y solo con aprobación llama a la tarea `Premium`; `ApplicationPrepChecker` (dominio puro) avisa de afirmaciones sin respaldo. Ver [ASSISTANT.md](ASSISTANT.md).
+
 ### Alertas (fase 6)
 
 `NotificationJob` (Quartz, cada 5 min) → `DigestService`: por usuario decide con `NotificationPolicy` (dominio puro), guarda el aviso en la bandeja **antes** de enviar (memoria anti-duplicados) y empuja a los dispositivos vía `IPushSender` (`ExpoPushSender` o `NullPushSender`). Tras la ingesta, `MatchRecomputeService.RecomputeForJobsAsync` evalúa solo las ofertas nuevas o cambiadas. Detalle en [NOTIFICATIONS.md](NOTIFICATIONS.md).

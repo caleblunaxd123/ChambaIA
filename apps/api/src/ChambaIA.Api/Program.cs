@@ -68,6 +68,7 @@ api.MapApplications();
 api.MapCatalog();
 api.MapNotifications();
 api.MapAdmin();
+api.MapApplicationPrep();
 api.MapSources(app.Environment.IsDevelopment());
 api.MapResumes();
 api.MapAgent();

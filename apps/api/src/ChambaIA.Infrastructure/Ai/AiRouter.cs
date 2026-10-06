@@ -21,6 +21,12 @@ public sealed record AiResult(bool Ok, string? Text, string? Provider, string? M
 /// <summary>Who is asking and what. <see cref="UserId"/> null means the system itself (background work), which has its own budget.</summary>
 public sealed record AiCall(Guid? UserId, SubscriptionPlan Plan, string System, string User, int MaxOutputTokens = 500, bool Json = true);
 
+/// <summary>What a scope may still do today and this month. Shown to people before they spend an AI action.</summary>
+public sealed record AiQuota(int CallsToday, int DailyLimit, decimal SpentThisMonthUsd, decimal MonthlyLimitUsd)
+{
+    public int RemainingToday => Math.Max(0, DailyLimit - CallsToday);
+}
+
 /// <summary>One circuit breaker per provider, shared by every request and job in the process.</summary>
 public sealed class AiCircuits(TimeProvider clock)
 {
@@ -54,7 +60,7 @@ public sealed class AiRouter(
         var route = _o.RouteFor(task);
         if (route.Count == 0) return AiResult.Unavailable(AiUnavailable.NoRoute);
 
-        var budget = await CheckBudgetAsync(call, ct);
+        var budget = await CheckBudgetAsync(task, call, ct);
         if (budget != AiBudgetDecision.Allowed)
         {
             logger.LogInformation("AI call for {Task} refused by the budget: {Decision}.", task, budget);
@@ -87,17 +93,32 @@ public sealed class AiRouter(
         return AiResult.Unavailable(AiUnavailable.ProvidersFailed);
     }
 
-    private async Task<AiBudgetDecision> CheckBudgetAsync(AiCall call, CancellationToken ct)
+    public async Task<AiQuota> GetQuotaAsync(Guid? userId, SubscriptionPlan plan, AiTask task, CancellationToken ct = default)
+    {
+        var (dayStart, monthStart) = Windows(clock.GetUtcNow(), _o.UtcOffsetHours);
+        var scope = db.AiUsages.AsNoTracking().Where(u => u.UserId == userId);
+        var operation = task.ToString();
+        var limits = userId is null ? _o.Budgets.System.ToLimits(task) : _o.Budgets.For(plan, task);
+        return new AiQuota(
+            await scope.CountAsync(u => u.Operation == operation && u.CreatedAt >= dayStart, ct),
+            limits.DailyCalls,
+            await scope.Where(u => u.CreatedAt >= monthStart).SumAsync(u => (decimal?)u.EstimatedCost, ct) ?? 0m,
+            limits.MonthlyUsd);
+    }
+
+    private async Task<AiBudgetDecision> CheckBudgetAsync(AiTask task, AiCall call, CancellationToken ct)
     {
         var (dayStart, monthStart) = Windows(clock.GetUtcNow(), _o.UtcOffsetHours);
         var scope = db.AiUsages.AsNoTracking().Where(u => u.UserId == call.UserId);
+        var operation = task.ToString();
 
+        // Calls are counted per task (each has its own daily allowance); dollars are counted across all of them.
         var spend = new AiSpend(
-            await scope.CountAsync(u => u.CreatedAt >= dayStart, ct),
+            await scope.CountAsync(u => u.Operation == operation && u.CreatedAt >= dayStart, ct),
             await scope.Where(u => u.CreatedAt >= monthStart).SumAsync(u => (decimal?)u.EstimatedCost, ct) ?? 0m);
         var global = await db.AiUsages.AsNoTracking().Where(u => u.CreatedAt >= monthStart).SumAsync(u => (decimal?)u.EstimatedCost, ct) ?? 0m;
 
-        var limits = call.UserId is null ? _o.Budgets.System.ToLimits() : _o.Budgets.For(call.Plan);
+        var limits = call.UserId is null ? _o.Budgets.System.ToLimits(task) : _o.Budgets.For(call.Plan, task);
         return AiBudgetPolicy.Check(limits, spend, _o.Budgets.GlobalMonthlyUsd, global);
     }
 

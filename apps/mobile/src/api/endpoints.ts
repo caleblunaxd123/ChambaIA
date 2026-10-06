@@ -2,12 +2,15 @@ import { z } from 'zod';
 
 import { request } from './client';
 import {
+  type AgentCommand,
   type ApplicationStatus,
   type MatchCategory,
   type Preferences,
   type Profile,
   type WorkModality,
   agentReplySchema,
+  prepDraftSchema,
+  prepPreviewSchema,
   resumeDetailSchema,
   sourceSchema,
   resumeSchema,
@@ -25,6 +28,9 @@ import {
   profileSchema,
   testNotificationSchema,
 } from './schemas';
+
+/** A model can need a while the first time it is called (a local one loads into memory): the app waits instead of giving up at 15 s. */
+const AI_TIMEOUT_MS = 60_000;
 
 export type FeedTab = 'forYou' | 'new' | 'saved';
 
@@ -95,6 +101,10 @@ export const api = {
   jobs: {
     detail: (id: string) => request(`/jobs/${id}`, { schema: jobDetailResponseSchema }),
     similar: (id: string, limit = 4) => request(`/jobs/${id}/similar?limit=${limit}`, { schema: z.array(feedItemSchema) }),
+    prepPreview: (id: string) => request(`/jobs/${id}/application-prep`, { schema: prepPreviewSchema }),
+    /** Only with the person's explicit approval of what the preview showed. */
+    prepGenerate: (id: string, tone: 'formal' | 'cercano') =>
+      request(`/jobs/${id}/application-prep`, { method: 'POST', body: { approved: true, tone }, schema: prepDraftSchema, timeoutMs: AI_TIMEOUT_MS * 2 }),
   },
 
   applications: {
@@ -130,7 +140,9 @@ export const api = {
   },
 
   agent: {
-    send: (text: string) => request('/agent/messages', { method: 'POST', body: { text }, schema: agentReplySchema }),
+    send: (text: string) => request('/agent/messages', { method: 'POST', body: { text }, schema: agentReplySchema, timeoutMs: AI_TIMEOUT_MS }),
+    /** Approval of a proposal the AI made. */
+    apply: (commands: AgentCommand[]) => request('/agent/apply', { method: 'POST', body: { commands }, schema: agentReplySchema }),
   },
 };
 

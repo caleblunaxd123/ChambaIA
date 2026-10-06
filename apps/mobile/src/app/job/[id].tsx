@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { JobDetailResponse, MatchNote } from '@/api/schemas';
 import { useCreateApplication, useJobDetail, useSeenMutation } from '@/api/queries';
+import { PrepCard } from '@/features/assistant/ApplicationPrep';
 import { FitBreakdown, ImprovementsCard, SimilarJobs } from '@/features/jobs/Explanation';
 import { categoryStyle } from '@/features/jobs/MatchBadge';
 import { SkillBadge } from '@/features/jobs/SkillBadge';
@@ -220,6 +221,8 @@ function DetailBody({ data, onOpenTracker, onEditProfile }: { data: JobDetailRes
       </Card>
 
       <Description text={job.description} />
+
+      <PrepCard jobId={s.id} />
 
       <SimilarJobs jobId={s.id} />
     </>

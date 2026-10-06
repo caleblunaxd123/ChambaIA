@@ -20,10 +20,18 @@ public sealed class AiProviderOptions
 
 public sealed class AiScopeBudget
 {
+    /// <summary>Calls per day for any task that has no entry of its own below.</summary>
     public int DailyCalls { get; set; }
     public decimal MonthlyUsd { get; set; }
 
-    public AiBudgetLimits ToLimits() => new(DailyCalls, MonthlyUsd);
+    /// <summary>
+    /// Daily calls per task. Each task has its own counter: understanding a loosely worded sentence costs a fraction of writing an
+    /// application draft, so they must not compete for the same allowance (found in a real run: three sentences used up the drafts).
+    /// </summary>
+    public Dictionary<string, int> DailyCallsByTask { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public AiBudgetLimits ToLimits(AiTask task) =>
+        new(DailyCallsByTask.TryGetValue(task.ToString(), out var own) ? own : DailyCalls, MonthlyUsd);
 }
 
 public sealed class AiBudgetOptions
@@ -32,15 +40,15 @@ public sealed class AiBudgetOptions
     public decimal GlobalMonthlyUsd { get; set; } = 5m;
     /// <summary>Background work done by the system itself (offer extraction): not tied to a user.</summary>
     public AiScopeBudget System { get; set; } = new() { DailyCalls = 200, MonthlyUsd = 2m };
-    public AiScopeBudget Free { get; set; } = new() { DailyCalls = 3, MonthlyUsd = 0.05m };
-    public AiScopeBudget Pro { get; set; } = new() { DailyCalls = 20, MonthlyUsd = 1m };
-    public AiScopeBudget ProPlus { get; set; } = new() { DailyCalls = 60, MonthlyUsd = 3m };
+    public AiScopeBudget Free { get; set; } = new() { DailyCalls = 3, MonthlyUsd = 0.05m, DailyCallsByTask = { ["CommandFallback"] = 15 } };
+    public AiScopeBudget Pro { get; set; } = new() { DailyCalls = 20, MonthlyUsd = 1m, DailyCallsByTask = { ["CommandFallback"] = 50 } };
+    public AiScopeBudget ProPlus { get; set; } = new() { DailyCalls = 60, MonthlyUsd = 3m, DailyCallsByTask = { ["CommandFallback"] = 120 } };
 
-    public AiBudgetLimits For(SubscriptionPlan plan) => plan switch
+    public AiBudgetLimits For(SubscriptionPlan plan, AiTask task) => plan switch
     {
-        SubscriptionPlan.Pro => Pro.ToLimits(),
-        SubscriptionPlan.ProPlus => ProPlus.ToLimits(),
-        _ => Free.ToLimits()
+        SubscriptionPlan.Pro => Pro.ToLimits(task),
+        SubscriptionPlan.ProPlus => ProPlus.ToLimits(task),
+        _ => Free.ToLimits(task)
     };
 }
 

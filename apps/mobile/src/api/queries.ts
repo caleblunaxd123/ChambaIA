@@ -3,7 +3,7 @@ import { type InfiniteData, type QueryClient, keepPreviousData, useInfiniteQuery
 import { useAuthStore } from '@/state/auth-store';
 
 import { type ApplicationPatch, type FeedFilters, type FeedTab, type PreferencesInput, type ProfileInput, api } from './endpoints';
-import type { ApplicationStatus, FeedPage, MatchStatus } from './schemas';
+import type { AgentCommand, ApplicationStatus, FeedPage, MatchStatus } from './schemas';
 
 /** One place for cache keys so invalidation can never drift from the queries. */
 export const keys = {
@@ -207,6 +207,33 @@ export function useAgentMessage() {
         await invalidateMatchData(client);
       }
     },
+  });
+}
+
+/** Applies what the AI proposed, once the person said yes. Everything derived from preferences is refetched. */
+export function useApplyProposal() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (commands: AgentCommand[]) => api.agent.apply(commands),
+    onSuccess: async (reply) => {
+      if (reply.changes.length > 0) {
+        await client.invalidateQueries({ queryKey: keys.preferences });
+        await invalidateMatchData(client);
+      }
+    },
+  });
+}
+
+/** What would be sent to the AI for this offer, and what is left of today's quota. Nothing is sent by asking. */
+export function usePrepPreview(jobId: string, enabled = true) {
+  return useQuery({ queryKey: ['job', jobId, 'prep'], queryFn: () => api.jobs.prepPreview(jobId), enabled, staleTime: 60_000 });
+}
+
+export function usePrepGenerate(jobId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (tone: 'formal' | 'cercano') => api.jobs.prepGenerate(jobId, tone),
+    onSettled: () => client.invalidateQueries({ queryKey: ['job', jobId, 'prep'] }),
   });
 }
 

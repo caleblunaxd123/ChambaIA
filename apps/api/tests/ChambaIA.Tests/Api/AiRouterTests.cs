@@ -196,6 +196,44 @@ public class AiRouterTests(ApiFactory factory)
     }
 
     [Fact]
+    public async Task Each_task_has_its_own_daily_allowance_so_cheap_interpretations_never_eat_the_expensive_drafts()
+    {
+        var clock = IsolatedClock();
+        var (_, user) = await factory.NewUserAsync();
+        var providers = new Dictionary<string, IAiProvider> { ["a"] = new FakeProvider("a", (_, _) => Ok()), ["b"] = new FakeProvider("b", (_, _) => Ok()) };
+        Task<AiResult> Ask(AiTask task) => With(clock, Options(o =>
+        {
+            o.Budgets.Free.DailyCalls = 1;                                  // drafts
+            o.Budgets.Free.DailyCallsByTask["CommandFallback"] = 2;         // interpretations
+            o.Routes["CommandFallback"] = ["a"];
+        }), providers, (r, _) => r.CompleteAsync(task, Call(user.User.Id)));
+
+        Assert.True((await Ask(AiTask.CommandFallback)).Ok);
+        Assert.True((await Ask(AiTask.CommandFallback)).Ok);
+        Assert.Equal(AiBudgetDecision.DailyCallsReached, (await Ask(AiTask.CommandFallback)).Budget);
+
+        Assert.True((await Ask(AiTask.Premium)).Ok);                         // untouched by the two interpretations
+        Assert.Equal(AiBudgetDecision.DailyCallsReached, (await Ask(AiTask.Premium)).Budget);
+    }
+
+    [Fact]
+    public async Task The_quota_shown_to_a_person_counts_only_that_tasks_calls()
+    {
+        var clock = IsolatedClock();
+        var (_, user) = await factory.NewUserAsync();
+        var providers = new Dictionary<string, IAiProvider> { ["a"] = new FakeProvider("a", (_, _) => Ok()), ["b"] = new FakeProvider("b", (_, _) => Ok()) };
+        var options = Options(o => { o.Budgets.Free.DailyCalls = 3; o.Budgets.Free.DailyCallsByTask["CommandFallback"] = 10; o.Routes["CommandFallback"] = ["a"]; });
+
+        await With(clock, options, providers, (r, _) => r.CompleteAsync(AiTask.CommandFallback, Call(user.User.Id)));
+        await With(clock, options, providers, (r, _) => r.CompleteAsync(AiTask.Premium, Call(user.User.Id)));
+        var drafts = await With(clock, options, providers, (r, _) => r.GetQuotaAsync(user.User.Id, SubscriptionPlan.Free, AiTask.Premium));
+        var sentences = await With(clock, options, providers, (r, _) => r.GetQuotaAsync(user.User.Id, SubscriptionPlan.Free, AiTask.CommandFallback));
+
+        Assert.Equal((1, 3, 2), (drafts.CallsToday, drafts.DailyLimit, drafts.RemainingToday));
+        Assert.Equal((1, 10, 9), (sentences.CallsToday, sentences.DailyLimit, sentences.RemainingToday));
+    }
+
+    [Fact]
     public async Task The_monthly_spend_of_a_scope_is_capped_in_dollars()
     {
         var clock = IsolatedClock();

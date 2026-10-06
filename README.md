@@ -129,6 +129,12 @@ npm run typecheck && npm run lint && npm test
 - **Perfil**: CV actual (reemplazar / eliminar), borrar historial y eliminar cuenta (borra también los archivos de CV).
 - Plan FREE/PRO: 1 CV (subir otro reemplaza y borra el anterior del disco); PRO+: hasta 5.
 
+## Qué incluye la Fase 9 (asistente)
+
+- **Respaldo con IA para frases libres**: si las reglas del agente no entienden («prefiero que me quede cerca, no más de media hora en micro»), un modelo propone el cambio en un esquema cerrado y validado, y la app muestra **«Lo entendí con IA» con Sí, aplicar / No**. Nada se aplica sin tu aprobación.
+- **Preparar mi postulación** (premium): en el detalle de una oferta, primero ves **el texto exacto** que se enviaría a la IA y lo que nunca se envía; solo con tu aprobación genera un borrador de mensaje, por qué encajas, lo que el perfil no respalda y preguntas probables de entrevista. **No se envía ni se guarda nada**; un verificador sin IA avisa si el borrador afirma algo que tu perfil no respalda.
+- Cuotas diarias **por tarea** y por plan; sin IA, todo sigue funcionando con las reglas. Detalle en [docs/ASSISTANT.md](docs/ASSISTANT.md).
+
 ## Qué incluye la Fase 8 (proveedores de IA)
 
 - **Una sola puerta para los modelos** (`AiRouter`): proveedores intercambiables por configuración (Ollama local, cualquier API compatible con OpenAI/DeepSeek/Gemini/Groq, y Claude), rutas por tarea con respaldo, *circuit breaker* por proveedor y **presupuestos** (global, del sistema y por plan) revisados antes de cada llamada. **Apagado por defecto**: sin IA el producto funciona igual.

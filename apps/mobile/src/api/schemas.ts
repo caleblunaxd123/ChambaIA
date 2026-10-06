@@ -208,13 +208,49 @@ export type Overview = z.infer<typeof overviewSchema>;
 
 // ---------- agent ----------
 
+export const agentCommandSchema = z.object({
+  intent: z.string(),
+  text: z.string().nullable(),
+  number: z.number().nullable(),
+  modality: z.string().nullable(),
+  flag: z.boolean().nullable(),
+});
+export type AgentCommand = z.infer<typeof agentCommandSchema>;
+
+/** What the AI understood, not yet applied: the person approves it (or not). */
+export const agentProposalSchema = z.object({ commands: z.array(agentCommandSchema), descriptions: z.array(z.string()) });
+export type AgentProposal = z.infer<typeof agentProposalSchema>;
+
 export const agentReplySchema = z.object({
   reply: z.string(),
   understood: z.boolean(),
   changes: z.array(z.string()),
   overview: overviewSchema.nullable(),
+  proposal: agentProposalSchema.nullish(),
 });
 export type AgentReply = z.infer<typeof agentReplySchema>;
+
+// ---------- application prep (premium, with explicit approval) ----------
+
+export const prepPreviewSchema = z.object({
+  available: z.boolean(),
+  unavailableReason: z.string().nullable(),
+  /** The exact text that would be sent to the model. */
+  payload: z.string(),
+  includes: z.array(z.string()),
+  excludes: z.array(z.string()),
+  quota: z.object({ callsToday: z.number(), dailyLimit: z.number(), remainingToday: z.number() }),
+});
+export type PrepPreview = z.infer<typeof prepPreviewSchema>;
+
+export const prepDraftSchema = z.object({
+  message: z.string(),
+  highlights: z.array(z.string()),
+  gaps: z.array(z.string()),
+  questions: z.array(z.string()),
+  warnings: z.array(z.string()),
+});
+export type PrepDraft = z.infer<typeof prepDraftSchema>;
 
 // ---------- resumes ----------
 

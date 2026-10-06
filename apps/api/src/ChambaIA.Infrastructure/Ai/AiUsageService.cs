@@ -75,7 +75,7 @@ public sealed class AiUsageService(AppDbContext db, AiCircuits circuits, IOption
         var systemSpent = await system.Where(u => u.CreatedAt >= monthStart).SumAsync(u => (decimal?)u.EstimatedCost, ct) ?? 0m;
         var budget = new AiBudgetStatus(
             _o.Budgets.GlobalMonthlyUsd, spentMonth, Math.Max(0m, _o.Budgets.GlobalMonthlyUsd - spentMonth),
-            await system.CountAsync(u => u.CreatedAt >= dayStart, ct), _o.Budgets.System.DailyCalls, systemSpent, _o.Budgets.System.MonthlyUsd);
+            await system.CountAsync(u => u.CreatedAt >= dayStart, ct), _o.Budgets.System.ToLimits(AiTask.JobExtraction).DailyCalls, systemSpent, _o.Budgets.System.MonthlyUsd);
 
         var providers = _o.Providers.Select(p => new AiProviderStatus(
             p.Key, p.Value.Type, p.Value.Model, !string.IsNullOrWhiteSpace(p.Value.ApiKey), circuits.For(p.Key).IsOpen,

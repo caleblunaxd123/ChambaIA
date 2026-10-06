@@ -102,6 +102,7 @@ public static class DependencyInjection
         services.AddScoped<AiRouter>();
         services.AddScoped<AiUsageService>();
         services.AddScoped<JobEnrichmentService>();
+        services.AddScoped<ApplicationPrepService>();
     }
 
     /// <summary>Alerts: the digest service always runs; actual push delivery happens only with Push:Provider = Expo.</summary>

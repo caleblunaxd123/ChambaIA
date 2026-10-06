@@ -75,8 +75,13 @@ Leyenda: [x] hecho · [ ] pendiente
 - [ ] Pantalla de costos en la app para administradores (hoy: JSON/Swagger)
 - [ ] Calibrar el verificador con ofertas reales etiquetadas (mide cuántos datos válidos descarta)
 
-## Fase 9 — Asistente
-- [ ] Fallback LLM pequeño para comandos no reconocidos (usará `AiRouter` con la tarea `CommandFallback`, ya lista); preparación de postulación (aprobación explícita)
+## Fase 9 — Asistente ✅
+- [x] Respaldo con IA para frases que las reglas no entienden: esquema cerrado, propuesta + aprobación («Sí, aplicar»), validación doble
+- [x] Preparar mi postulación (premium): vista previa del texto exacto que se envía, aprobación explícita, borrador que no se envía ni se guarda, verificador de honestidad (habilidades, años, corchetes)
+- [x] Cuotas diarias por tarea y por plan (interpretar frases no compite con los borradores)
+- [ ] Carta de presentación larga / CV adaptado (hoy: mensaje breve + puntos + preguntas)
+- [ ] Practicar la entrevista con respuestas (hoy: solo preguntas probables)
+- [ ] Interruptor por usuario para «no enviar mis frases libres a la nube»
 
 ## Fase 10 — Fuentes reales
 - [ ] Conectores por API/feeds/páginas públicas respetando robots.txt y términos (ver JOB-SOURCES.md)

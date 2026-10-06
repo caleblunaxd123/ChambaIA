@@ -56,6 +56,10 @@ Ambos devolvieron JSON válido y dentro de rangos razonables: la validación de 
 
 Rendimiento medido en un PC local: 2–10 s por oferta con `llama3.2` (hasta ~25 s la primera vez, mientras el modelo se carga) y 5–32 s con `llama3.1:8b`. Por eso cada proveedor tiene su propio `TimeoutSeconds` (120 recomendado para modelos locales).
 
+### Segundo uso: el asistente (Fase 9)
+
+Las tareas `CommandFallback` (entender frases libres) y `Premium` (borrador de postulación) usan el mismo router, con **cuotas diarias propias por tarea** (`Budgets.{plan}.DailyCallsByTask`; el resto de tareas usa `DailyCalls`) y el tope en dólares compartido. Detalle, privacidad y verificación en [ASSISTANT.md](ASSISTANT.md).
+
 ### Configuración de ejemplo
 
 ```bash

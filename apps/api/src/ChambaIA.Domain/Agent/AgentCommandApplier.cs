@@ -33,6 +33,28 @@ public static class AgentCommandApplier
         return summary;
     }
 
+    /// <summary>
+    /// What these commands would say if applied, without touching the real preferences: they run on a copy. A command that would change
+    /// nothing contributes no line, so an empty result means "I already had all of that noted".
+    /// </summary>
+    public static IReadOnlyList<string> Preview(JobPreferences prefs, IEnumerable<AgentCommand> commands)
+    {
+        var copy = new JobPreferences
+        {
+            MinSalary = prefs.MinSalary,
+            PreferredRoles = [.. prefs.PreferredRoles],
+            ExcludedRoles = [.. prefs.ExcludedRoles],
+            ExcludedKeywords = [.. prefs.ExcludedKeywords],
+            PreferredModalities = [.. prefs.PreferredModalities],
+            PreferredDistricts = [.. prefs.PreferredDistricts],
+            ExcludedDistricts = [.. prefs.ExcludedDistricts],
+            HomeDistrict = prefs.HomeDistrict,
+            MaxCommuteMinutes = prefs.MaxCommuteMinutes,
+            WeekdaysOnly = prefs.WeekdaysOnly
+        };
+        return commands.Select(c => Apply(copy, c)).Where(summary => summary is not null).Select(summary => summary!).ToList();
+    }
+
     private static string? SetMinSalary(JobPreferences prefs, decimal amount)
     {
         if (prefs.MinSalary == amount) return null;

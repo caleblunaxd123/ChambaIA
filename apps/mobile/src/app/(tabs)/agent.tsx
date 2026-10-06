@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useAgentMessage, useOverview, usePreferences, useUpdatePreferences } from '@/api/queries';
+import { useAgentMessage, useApplyProposal, useOverview, usePreferences, useUpdatePreferences } from '@/api/queries';
 import { Remembered, rememberedCount } from '@/features/agent/Remembered';
+import { hasProposal } from '@/features/assistant/helpers';
 import { jobsLink } from '@/features/jobs/links';
 import { formatRelativeTime } from '@/lib/format';
 import { haptics } from '@/lib/haptics';
@@ -31,7 +32,8 @@ export default function AgentScreen() {
   const prefs = usePreferences();
   const updatePrefs = useUpdatePreferences();
   const send = useAgentMessage();
-  const { messages, push } = useAgentChat();
+  const applyProposal = useApplyProposal();
+  const { messages, push, resolveProposal } = useAgentChat();
   const [text, setText] = useState('');
   const [memoryOpen, setMemoryOpen] = useState(false);
   const scroller = useRef<ScrollView>(null);
@@ -49,8 +51,10 @@ export default function AgentScreen() {
     push({ from: 'user', text: message });
     send.mutate(message, {
       onSuccess: (reply) => {
-        push({ from: 'agent', text: reply.reply, changes: reply.changes });
+        const proposal = hasProposal(reply.proposal) ? { commands: reply.proposal.commands, descriptions: reply.proposal.descriptions, state: 'pending' as const } : undefined;
+        push({ from: 'agent', text: reply.reply, changes: reply.changes, proposal });
         if (reply.changes.length > 0) haptics.success();
+        else if (proposal) haptics.tap();
         else haptics.warning();
       },
       onError: (error) => {
@@ -58,6 +62,27 @@ export default function AgentScreen() {
         haptics.error();
       },
     });
+  };
+
+  const approve = (message: ChatMessage) => {
+    if (!message.proposal || applyProposal.isPending) return;
+    haptics.tap();
+    applyProposal.mutate(message.proposal.commands, {
+      onSuccess: (reply) => {
+        resolveProposal(message.id, 'applied');
+        push({ from: 'agent', text: reply.reply, changes: reply.changes });
+        haptics.success();
+      },
+      onError: (error) => {
+        push({ from: 'agent', text: error.message, failed: true });
+        haptics.error();
+      },
+    });
+  };
+
+  const dismiss = (message: ChatMessage) => {
+    resolveProposal(message.id, 'dismissed');
+    push({ from: 'agent', text: 'Entendido, no cambié nada.' });
   };
 
   const o = overview.data;
@@ -107,7 +132,7 @@ export default function AgentScreen() {
       >
         <Text variant="caption" tone="subtle" style={{ textAlign: 'center' }}>Dile lo que quieres y lo recordará. Trabaja por ti aunque cierres la app.</Text>
         {messages.map((m) => (
-          <Bubble key={m.id} message={m} onSeeJobs={() => router.navigate(jobsLink('forYou'))} />
+          <Bubble key={m.id} message={m} onSeeJobs={() => router.navigate(jobsLink('forYou'))} onApprove={() => approve(m)} onDismiss={() => dismiss(m)} approving={applyProposal.isPending} />
         ))}
         {send.isPending ? <Typing /> : null}
       </ScrollView>
@@ -178,7 +203,7 @@ function AgentAvatar({ size }: { size: number }) {
   );
 }
 
-function Bubble({ message, onSeeJobs }: { message: ChatMessage; onSeeJobs: () => void }) {
+function Bubble({ message, onSeeJobs, onApprove, onDismiss, approving }: { message: ChatMessage; onSeeJobs: () => void; onApprove: () => void; onDismiss: () => void; approving: boolean }) {
   const { colors, radius } = useTheme();
   const mine = message.from === 'user';
   const changes = message.changes ?? [];
@@ -200,6 +225,7 @@ function Bubble({ message, onSeeJobs }: { message: ChatMessage; onSeeJobs: () =>
         >
           <Text tone={mine ? 'onPrimary' : message.failed ? 'danger' : 'default'}>{message.text}</Text>
         </View>
+        {message.proposal ? <ProposalCard proposal={message.proposal} onApprove={onApprove} onDismiss={onDismiss} busy={approving} /> : null}
         {changes.length > 0 ? (
           <View style={{ padding: 12, gap: 8, borderRadius: radius.md, backgroundColor: colors.successTint }} testID="agent-changes">
             <Text variant="label" tone="success">Actualicé tu búsqueda</Text>
@@ -216,6 +242,34 @@ function Bubble({ message, onSeeJobs }: { message: ChatMessage; onSeeJobs: () =>
           </View>
         ) : null}
       </View>
+    </View>
+  );
+}
+
+/** What the AI understood, with the two honest options: nothing changes until the person says yes. */
+function ProposalCard({ proposal, onApprove, onDismiss, busy }: { proposal: NonNullable<ChatMessage['proposal']>; onApprove: () => void; onDismiss: () => void; busy: boolean }) {
+  const { colors, radius } = useTheme();
+  const pending = proposal.state === 'pending';
+  return (
+    <View style={{ padding: 12, gap: 10, borderRadius: radius.md, backgroundColor: colors.accentTint }} testID="agent-proposal">
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <Icon name="sparkles" size={14} tone="accent" />
+        <Text variant="label" tone="accent">Lo entendí con IA</Text>
+      </View>
+      {proposal.descriptions.map((d) => (
+        <View key={d} style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
+          <Icon name="arrow-forward-circle" size={16} tone="accent" />
+          <Text variant="caption" style={{ flex: 1 }}>{d}</Text>
+        </View>
+      ))}
+      {pending ? (
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <Button label="Sí, aplicar" size="sm" onPress={onApprove} loading={busy} testID="agent-proposal-apply" style={{ flex: 1 }} />
+          <Button label="No" size="sm" variant="secondary" onPress={onDismiss} disabled={busy} testID="agent-proposal-dismiss" style={{ flex: 1 }} />
+        </View>
+      ) : (
+        <Text variant="caption" tone="muted">{proposal.state === 'applied' ? 'Aplicado.' : 'Descartado.'}</Text>
+      )}
     </View>
   );
 }

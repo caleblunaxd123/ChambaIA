@@ -31,6 +31,8 @@ type RequestOptions<T> = {
   /** false for login/register/refresh: no bearer token and no refresh-retry. */
   auth?: boolean;
   signal?: AbortSignal;
+  /** Slow-by-nature calls (a model writing a draft) need more than the default; everything else keeps the short one. */
+  timeoutMs?: number;
 };
 
 let refreshInFlight: Promise<boolean> | null = null;
@@ -59,12 +61,12 @@ function refreshSession(): Promise<boolean> {
 }
 
 export async function request<T = void>(path: string, options: RequestOptions<T> = {}): Promise<T> {
-  const { method = 'GET', body, schema, auth = true, signal } = options;
+  const { method = 'GET', body, schema, auth = true, signal, timeoutMs } = options;
 
   const send = async (): Promise<Response> => {
     const controller = new AbortController();
     const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
-    const timer = setTimeout(() => controller.abort(), isForm ? UPLOAD_TIMEOUT_MS : REQUEST_TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), timeoutMs ?? (isForm ? UPLOAD_TIMEOUT_MS : REQUEST_TIMEOUT_MS));
     signal?.addEventListener('abort', () => controller.abort(), { once: true });
 
     const headers: Record<string, string> = { Accept: 'application/json' };
